@@ -32,7 +32,7 @@ dt = DecisionTreeClassifier(max_depth=1, criterion=kldc)
 # Create and fit an AdaBoosted decision tree
 bdt = AdaBoostClassifier(dt,
                          algorithm="SAMME",
-                         n_estimators=200)
+                         n_estimators=50)
 bdt.fit(X, y)
 
 print('hellinger distance score: ', bdt.score(X, y))
