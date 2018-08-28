@@ -126,7 +126,6 @@ cdef class KullbackLeibnerCriterion(ClassificationCriterion):
       for c in range(n_classes[0]):
           print "Klasse c(" + str(c) +")"
           count_k = sum_total[c]
-<<<<<<< HEAD
           print "count_k(" + str(count_k) +")"
           #assert ((1.0 - count_k) != 0), "Division by zero,46"
           log_arg = (count_k) / (1.0 - count_k)
@@ -134,11 +133,6 @@ cdef class KullbackLeibnerCriterion(ClassificationCriterion):
           print "Kule(" +str(kule)+ ") + count_k * np.log([tmp_div])(" + str(np.log([log_arg])) + ")"
           kule += (count_k / 2.0) - (count_k / 4.0 * np.log([log_arg]))
 
-=======
-          tmp_div = count_k / (1.0 - count_k)
-          with gil:
-            kule += count_k * np.log([tmp_div])
->>>>>>> 6f8413f720eb7737fb1991c4fe91f44326ee28ff
       sum_total += self.sum_stride
       print "Final kule(" + str(kule) + ")"
 
@@ -167,17 +161,10 @@ cdef class KullbackLeibnerCriterion(ClassificationCriterion):
           with gil:
             kule_left += (count_k / 2.0) - (count_k / 4.0 * np.log([log_arg]))
 
-<<<<<<< HEAD
           count_k = sum_right[c]
           log_arg = (count_k) / (1.0 - count_k)
           with gil:
             kule_right += (count_k / 2.0) - (count_k / 4.0 * np.log([log_arg]))
-=======
-            count_k = sum_right[c]
-            tmp_div = count_k / (1.0 - count_k)
-            with gil:
-              kule_right += count_k * np.log([tmp_div])
->>>>>>> 6f8413f720eb7737fb1991c4fe91f44326ee28ff
 
       sum_left += self.sum_stride
       sum_right += self.sum_stride

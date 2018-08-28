@@ -1,31 +1,34 @@
 import numpy as np
 import matplotlib.pyplot as plt
 
-from sklearn.ensemble import AdaBoostClassifier
+from sklearn.ensemble import AdaBoostClassifier, RandomForestClassifier
 from sklearn.tree import DecisionTreeClassifier
-from sklearn.datasets import make_gaussian_quantiles
+from sklearn.datasets import make_gaussian_quantiles, make_classification
 
 
 # Construct dataset
-X1, y1 = make_gaussian_quantiles(cov=2.,
-                                 n_samples=500, n_features=2,
-                                 n_classes=2, random_state=1)
-X2, y2 = make_gaussian_quantiles(mean=(8, 8), cov=1.5,
-                                 n_samples=800, n_features=2,
-                                 n_classes=2, random_state=1)
+X1, y1 = make_classification(n_features=2, n_redundant=0, n_informative=1,n_clusters_per_class=1)
+X2, y2 = make_classification(n_features=2, n_redundant=0, n_informative=1, n_clusters_per_class=1)
+#X1, y1 = make_gaussian_quantiles(cov=2.,
+#                                 n_samples=300, n_features=2,
+#                                 n_classes=2, random_state=1)
+#X2, y2 = make_gaussian_quantiles(mean=(8, 8), cov=1.5,
+#                                 n_samples=500, n_features=2,
+#                                 n_classes=2, random_state=1)
 X = np.concatenate((X1, X2))
-y = np.concatenate((y1, - y2 + 1))
-
+y = np.concatenate((y1, -y2 + 1))
+#y = Y1
+#X = X1
 from kullback_leibner_divergence_criterion import KullbackLeibnerCriterion, GiniB
 kldc = KullbackLeibnerCriterion(1, np.array([2], dtype='int64'))
-#bdt = GiniB(1, np.array([2], dtype='int64'))
+bdt = GiniB(1, np.array([2], dtype='int64'))
 #from sklearn.ensemble import RandomForestClassifier
-#bdt = RandomForestClassifier(criterion=hdc, max_depth=4, n_estimators=100)
+#bdt = RandomForestClassifier(criterion=kldc, max_depth=4, n_estimators=100)
 #bdt.fit(X, y)
 
 
-#dt = DecisionTreeClassifier(max_depth=1, criterion=bdt)
-dt = DecisionTreeClassifier(max_depth=1, criterion=kldc)
+dt = DecisionTreeClassifier(max_depth=1, criterion=bdt)
+#dt = DecisionTreeClassifier(max_depth=1, criterion=kldc)
 #dt = DecisionTreeClassifier(max_depth=1, criterion=hdc)
 #dt = DecisionTreeClassifier(max_depth=1, criterion='gini')
 #dt = DecisionTreeClassifier(max_depth=1, criterion='entropy')
@@ -72,6 +75,7 @@ plt.title('Decision Boundary')
 
 # Plot the two-class decision scores
 twoclass_output = bdt.decision_function(X)
+#twoclass_output = bdt.decision_path(X)
 plot_range = (twoclass_output.min(), twoclass_output.max())
 plt.subplot(122)
 for i, n, c in zip(range(2), class_names, plot_colors):
