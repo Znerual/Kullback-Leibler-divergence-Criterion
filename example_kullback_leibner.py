@@ -16,7 +16,8 @@ X2, y2 = make_classification(n_features=2, n_redundant=0, n_informative=1, n_clu
 #                                 n_samples=500, n_features=2,
 #                                 n_classes=2, random_state=1)
 X = np.concatenate((X1, X2))
-y = np.concatenate((y1, -y2 + 1))
+#y = np.concatenate((y1, -y2 + 1))
+y = np.concatenate((y1,y2))
 #y = Y1
 #X = X1
 from kullback_leibner_divergence_criterion import KullbackLeibnerCriterion, GiniB
