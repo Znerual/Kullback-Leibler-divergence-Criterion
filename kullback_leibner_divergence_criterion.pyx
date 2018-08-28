@@ -28,7 +28,8 @@ cdef class KullbackLeibnerCriterion(ClassificationCriterion):
       for c in range(n_classes[0]):
           count_k = sum_total[c]
           tmp_div = count_k / (1.0 - count_k)
-          kule += count_k * np.log([tmp_div])
+          with gil:
+            kule += count_k * np.log([tmp_div])
       sum_total += self.sum_stride
 
       return kule
@@ -57,7 +58,8 @@ cdef class KullbackLeibnerCriterion(ClassificationCriterion):
 
             count_k = sum_right[c]
             tmp_div = count_k / (1.0 - count_k)
-            kule_right += count_k * np.log([tmp_div])
+            with gil:
+              kule_right += count_k * np.log([tmp_div])
 
         sum_left += self.sum_stride
         sum_right += self.sum_stride
