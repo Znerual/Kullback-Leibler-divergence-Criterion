@@ -3,7 +3,7 @@ from Cython.Build import cythonize
 import numpy
 
 setup(
-    name='kullback-leibner-divergence-criterion',
+    name='kullback_leibner_divergence_criterion',
     version=0.1,
     url='https://github.com/Znerual/Kullback-Leibner-divergence-Criterion',
     author='Laurenz Ruzicka',
