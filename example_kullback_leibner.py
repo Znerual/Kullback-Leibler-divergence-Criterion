@@ -39,6 +39,8 @@ w1 = np.concatenate((w_alt_hyp, w_hyp))
 
 #final weights
 w = np.concatenate((w0,w1))
+EPSILON = 0.005
+w_min = min((0.01 + EPSILON) / n_hyp_size, (0.01 + EPSILON) / n_alt_hyp_size)
 
 from kullback_leibner_divergence_criterion import KullbackLeibnerCriterion
 kldc = KullbackLeibnerCriterion(1, np.array([2], dtype='int64'))
@@ -80,7 +82,8 @@ plt.axis("tight")
 
 # Plot the training points
 for i, n, c in zip(range(2), class_names, plot_colors):
-    idx = np.where(y == i)
+    idx = np.intersect1d(np.where(y == i),np.where(w > w_min))
+    #idx = np.where(y == i)
     plt.scatter(X[idx, 0], X[idx, 1],
                 c=c, cmap=plt.cm.Paired,
                 s=20, edgecolor='k',
@@ -94,12 +97,12 @@ plt.ylabel('y')
 plt.title('Decision Boundary')
 
 # Plot the two-class decision scores
-twoclass_output = bdt.decision_function(X)
-#twoclass_output = bdt.decision_path(X)
+twoclass_output = bdt.decision_function(X[np.where(w> w_min)])
+
 plot_range = (twoclass_output.min(), twoclass_output.max())
 plt.subplot(122)
 for i, n, c in zip(range(2), class_names, plot_colors):
-    plt.hist(twoclass_output[y == i],
+    plt.hist(twoclass_output[y[np.where(w> w_min)] == i],
              bins=10,
              range=plot_range,
              facecolor=c,
