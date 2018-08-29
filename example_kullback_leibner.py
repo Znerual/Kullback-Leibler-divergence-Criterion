@@ -13,7 +13,7 @@ from kullback_leibner_divergence_criterion import KullbackLeibnerCriterion
 kldc = KullbackLeibnerCriterion(1, np.array([2], dtype='int64'))
 
 #dt = DecisionTreeClassifier(max_depth=1, criterion=bdt)
-dt = DecisionTreeClassifier(max_depth=2, criterion=kldc)
+dt = DecisionTreeClassifier(max_depth=1, criterion=kldc)
 #dt = DecisionTreeClassifier(max_depth=1, criterion=hdc)
 #dt = DecisionTreeClassifier(max_depth=1, criterion='gini')
 #dt = DecisionTreeClassifier(max_depth=1, criterion='entropy')
