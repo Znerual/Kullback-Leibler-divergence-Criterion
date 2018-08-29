@@ -7,8 +7,8 @@ from sklearn.datasets import make_gaussian_quantiles, make_classification, make_
 
 
 #Dataset creation
-X1,y1 = make_gaussian_quantiles(mean=(2, 2), cov=1.5, n_samples=400, n_features=2, n_classes=1, random_state=1)
-X2,y2 = make_gaussian_quantiles(cov=1.2, n_samples=300, n_features=2, n_classes=1, random_state=1)
+X1,y1 = make_gaussian_quantiles(mean=(2, 2), cov=1.5, n_samples=800, n_features=2, n_classes=1, random_state=1)
+X2,y2 = make_gaussian_quantiles(cov=1.2, n_samples=600, n_features=2, n_classes=1, random_state=1)
 
 X12 = np.concatenate((X1,X2))
 X = np.concatenate((X12,X12))
