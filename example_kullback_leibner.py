@@ -19,10 +19,6 @@ y = np.concatenate((y1, - y2 + 1))
 from kullback_leibner_divergence_criterion import KullbackLeibnerCriterion
 kldc = KullbackLeibnerCriterion(1, np.array([2], dtype='int64'))
 
-#from sklearn.ensemble import RandomForestClassifier
-#bdt = RandomForestClassifier(criterion=hdc, max_depth=4, n_estimators=100)
-#bdt.fit(X, y)
-
 
 dt = DecisionTreeClassifier(max_depth=1, criterion=kldc)
 #dt = DecisionTreeClassifier(max_depth=1, criterion=hdc)
@@ -31,10 +27,14 @@ dt = DecisionTreeClassifier(max_depth=1, criterion=kldc)
 # Create and fit an AdaBoosted decision tree
 bdt = AdaBoostClassifier(dt,
                          algorithm="SAMME",
-                         n_estimators=50)
+                         n_estimators=200)
 bdt.fit(X, y)
 
-print('hellinger distance score: ', bdt.score(X, y))
+#from sklearn.ensemble import RandomForestClassifier
+#bdt = RandomForestClassifier(criterion=kldc, max_depth=2, n_estimators=100)
+#bdt.fit(X, y)
+
+print('distance score: ', bdt.score(X, y))
 
 plot_colors = "br"
 plot_step = 0.02
