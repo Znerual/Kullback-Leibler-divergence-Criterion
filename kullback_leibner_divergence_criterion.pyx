@@ -56,7 +56,7 @@ cdef class KullbackLeibnerCriterion(ClassificationCriterion):
                     count_k /= self.weighted_n_node_samples
                     entropy -= count_k * log(count_k)
 
-            # kule 
+            # kule
             rho   = sum_total[1]/self.weighted_n_node_samples
             rho_0 = sum_total[0]/self.weighted_n_node_samples # for debugging
             if rho==1:
@@ -64,13 +64,13 @@ cdef class KullbackLeibnerCriterion(ClassificationCriterion):
             elif rho>0:
                 kule  = 0.5*rho - 0.25*rho*log(rho/(1-rho))
             else:
-                rho=0 
+                rho=0
 
             # Hellinger
             for c in range(n_classes[k]):
                 hellinger += 1.0
 
-            # This sum is gloablly relevant!
+            # This sum is gloablly relevant! It moves the array Pointer to the next entry
             sum_total += self.sum_stride
 
 
@@ -83,13 +83,13 @@ cdef class KullbackLeibnerCriterion(ClassificationCriterion):
 
             if choice == 'gini':
                 return gini / self.n_outputs
-            elif choice == 'kule': 
+            elif choice == 'kule':
                 return kule / self.n_outputs
             elif choice == 'entropy':
                 return entropy / self.n_outputs
             elif choice == 'hellinger':
                 return hellinger / self.n_outputs
-    
+
 
     cdef void children_impurity(self, double* impurity_left,
                                 double* impurity_right) nogil:
@@ -202,21 +202,17 @@ cdef class KullbackLeibnerCriterion(ClassificationCriterion):
             sum_right += self.sum_stride
 
         with gil:
-            DeltaKule =  - self.weighted_n_left*kule_left - self.weighted_n_right*kule_right + (self.weighted_n_left+self.weighted_n_right)*kule 
-            #print "children_impurity: kule_left %6.4f kule_right %6.4f kule_tot %6.4f DeltaKule %6.4f"%( kule_left, kule_right, kule, DeltaKule) 
+            DeltaKule =  - self.weighted_n_left*kule_left - self.weighted_n_right*kule_right + (self.weighted_n_left+self.weighted_n_right)*kule
+            #print "children_impurity: kule_left %6.4f kule_right %6.4f kule_tot %6.4f DeltaKule %6.4f"%( kule_left, kule_right, kule, DeltaKule)
             if choice == 'gini':
                 impurity_left[0] = gini_left / self.n_outputs
                 impurity_right[0] = gini_right / self.n_outputs
             elif choice == 'entropy':
                 impurity_left[0] = entropy_left / self.n_outputs
                 impurity_right[0] = entropy_right / self.n_outputs
-            elif choice == 'kule': 
+            elif choice == 'kule':
                 impurity_left[0]  = kule_left / self.n_outputs
                 impurity_right[0] = kule_right / self.n_outputs
             elif choice == 'hellinger':
                 impurity_left[0]  = hellinger_left  / self.n_outputs
                 impurity_right[0] = hellinger_right / self.n_outputs
-            sum_left += self.sum_stride
-            sum_right += self.sum_stride
-
-
