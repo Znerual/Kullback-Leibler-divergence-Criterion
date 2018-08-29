@@ -15,11 +15,7 @@ from libc.math cimport abs
 
 from sklearn.tree._utils cimport log
 
-epsilon = 10**-12
-def Chop( x, eps):
-    return 0. if abs(x)<eps else x
-
-choice = 'entropy'
+choice = 'kule'
 
 cdef class KullbackLeibnerCriterion(ClassificationCriterion):
 
@@ -207,3 +203,7 @@ cdef class KullbackLeibnerCriterion(ClassificationCriterion):
             elif choice == 'hellinger':
                 impurity_left[0]  = hellinger_left  / self.n_outputs
                 impurity_right[0] = hellinger_right / self.n_outputs
+            sum_left += self.sum_stride
+            sum_right += self.sum_stride
+
+
