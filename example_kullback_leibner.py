@@ -3,29 +3,17 @@ import matplotlib.pyplot as plt
 
 from sklearn.ensemble import AdaBoostClassifier, RandomForestClassifier
 from sklearn.tree import DecisionTreeClassifier
-from sklearn.datasets import make_gaussian_quantiles, make_classification
+from sklearn.datasets import make_gaussian_quantiles, make_classification, make_blobs
 
 
 # Construct dataset
-X1, y1 = make_classification(n_features=2, n_redundant=0, n_informative=1, n_clusters_per_class=1, n_samples=10000)
-X2, y2 = make_classification(n_features=2, n_redundant=0, n_informative=2, n_clusters_per_class=1, n_samples=10000)
-#X1, y1 = make_gaussian_quantiles(cov=2.,
-#                                 n_samples=300, n_features=2,
-#                                 n_classes=2, random_state=1)
-#X2, y2 = make_gaussian_quantiles(mean=(8, 8), cov=1.5,
-#                                 n_samples=500, n_features=2,
-#                                 n_classes=2, random_state=1)
-X = np.concatenate((X1, X2))
-#y = np.concatenate((y1, -y2 + 1))
-y = np.concatenate((y1,y2))
-#y = Y1
-#X = X1
+X, y = make_blobs( n_features=2, centers=[(0,0),(1,1)], cluster_std=1.0, n_samples=10000)
+
 from kullback_leibner_divergence_criterion import KullbackLeibnerCriterion
 kldc = KullbackLeibnerCriterion(1, np.array([2], dtype='int64'))
 
-
 #dt = DecisionTreeClassifier(max_depth=1, criterion=bdt)
-dt = DecisionTreeClassifier(max_depth=1, criterion=kldc)
+dt = DecisionTreeClassifier(max_depth=2, criterion=kldc)
 #dt = DecisionTreeClassifier(max_depth=1, criterion=hdc)
 #dt = DecisionTreeClassifier(max_depth=1, criterion='gini')
 #dt = DecisionTreeClassifier(max_depth=1, criterion='entropy')

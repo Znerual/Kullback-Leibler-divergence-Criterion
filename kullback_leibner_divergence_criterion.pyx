@@ -56,7 +56,7 @@ cdef class KullbackLeibnerCriterion(ClassificationCriterion):
                     count_k /= self.weighted_n_node_samples
                     entropy -= count_k * log(count_k)
 
-            # Kule 
+            # kule 
             rho   = sum_total[1]/self.weighted_n_node_samples
             rho_0 = sum_total[0]/self.weighted_n_node_samples # for debugging
             if rho==1:
@@ -99,6 +99,8 @@ cdef class KullbackLeibnerCriterion(ClassificationCriterion):
         cdef double* sum_right = self.sum_right
         cdef double kule_left = 0.0
         cdef double kule_right = 0.0
+        cdef double kule = 0.0
+        cdef double rho = 0.0
         cdef double gini_left = 0.0
         cdef double gini_right = 0.0
         cdef double entropy_left = 0.0
@@ -148,7 +150,7 @@ cdef class KullbackLeibnerCriterion(ClassificationCriterion):
                     count_k /= self.weighted_n_right
                     entropy_right -= count_k * log(count_k)
 
-            # Kule
+            # kule
             rho_left = sum_left[1]/self.weighted_n_left
             if rho_left == 1:
                 kule_left = - INFINITY
@@ -163,7 +165,16 @@ cdef class KullbackLeibnerCriterion(ClassificationCriterion):
             elif rho_right > 0:
                 kule_right = 0.5*rho_right - 0.25*rho_right*log(rho_right/(1-rho_right))
             else:
-                kule_right = 0. 
+                kule_right = 0.
+
+            # for debugging: compute the mother impurity
+            rho  = (sum_left[1] + sum_right[1])/(self.weighted_n_left + self.weighted_n_right)
+            if rho == 1:
+                kule = - INFINITY
+            elif rho > 0:
+                kule = 0.5*rho - 0.25*rho*log(rho/(1-rho))
+            else:
+                kule = 0.
 
             # Hellinger
             # stop splitting in case reached pure node with 0 samples of second class
@@ -191,6 +202,8 @@ cdef class KullbackLeibnerCriterion(ClassificationCriterion):
             sum_right += self.sum_stride
 
         with gil:
+            DeltaKule =  - self.weighted_n_left*kule_left - self.weighted_n_right*kule_right + (self.weighted_n_left+self.weighted_n_right)*kule 
+            #print "children_impurity: kule_left %6.4f kule_right %6.4f kule_tot %6.4f DeltaKule %6.4f"%( kule_left, kule_right, kule, DeltaKule) 
             if choice == 'gini':
                 impurity_left[0] = gini_left / self.n_outputs
                 impurity_right[0] = gini_right / self.n_outputs
