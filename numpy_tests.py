@@ -20,7 +20,7 @@ n_hyp_size = len(X2) #SM
 
 #in case of y=0, SM
 w_alt_hyp = np.zeros(n_alt_hyp_size)
-w_alt_hyp += 0.01
+w_alt_hyp += (0.01 / n_alt_hyp_size)
 w_hyp = np.ones(n_hyp_size)
 w_hyp /= n_hyp_size
 w0 = np.concatenate((w_alt_hyp, w_hyp))
@@ -29,7 +29,7 @@ w0 = np.concatenate((w_alt_hyp, w_hyp))
 w_alt_hyp = np.ones(n_alt_hyp_size)
 w_alt_hyp /= n_alt_hyp_size
 w_hyp = np.zeros(n_hyp_size)
-w_hyp += 0.01
+w_hyp += (0.01 / n_hyp_size)
 w1 = np.concatenate((w_alt_hyp, w_hyp))
 
 #final weights
