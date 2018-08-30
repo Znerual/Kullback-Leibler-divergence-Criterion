@@ -22,10 +22,11 @@ y = np.concatenate((y1,y2))
 #Generating weights
 n_alt_hyp_size = len(X1) #BSM
 n_hyp_size = len(X2) #SM
+EPSILON = 0.01
 
 #in case of y=0, SM
 w_alt_hyp = np.zeros(n_alt_hyp_size)
-w_alt_hyp += (0.01 / n_alt_hyp_size)
+w_alt_hyp += (EPSILON / n_alt_hyp_size)
 w_hyp = np.ones(n_hyp_size)
 w_hyp /= n_hyp_size
 w0 = np.concatenate((w_alt_hyp, w_hyp))
@@ -34,13 +35,13 @@ w0 = np.concatenate((w_alt_hyp, w_hyp))
 w_alt_hyp = np.ones(n_alt_hyp_size)
 w_alt_hyp /= n_alt_hyp_size
 w_hyp = np.zeros(n_hyp_size)
-w_hyp += (0.01 / n_hyp_size)
+w_hyp += (EPSILON / n_hyp_size)
 w1 = np.concatenate((w_alt_hyp, w_hyp))
 
 #final weights
 w = np.concatenate((w0,w1))
-EPSILON = 0.005
-w_min = min((0.01 + EPSILON) / n_hyp_size, (0.01 + EPSILON) / n_alt_hyp_size)
+
+w_min = min((2.0 * EPSILON) / n_hyp_size, (2.0 * EPSILON) / n_alt_hyp_size)
 
 from kullback_leibner_divergence_criterion import KullbackLeibnerCriterion
 kldc = KullbackLeibnerCriterion(1, np.array([2], dtype='int64'))
@@ -53,7 +54,7 @@ dt = DecisionTreeClassifier(max_depth=1, criterion=kldc)
 # Create and fit an AdaBoosted decision tree
 bdt = AdaBoostClassifier(dt,
                          algorithm="SAMME",
-                     n_estimators=100)
+                     n_estimators=200)
 bdt.fit(X, y, w)
 
 #from sklearn.ensemble import RandomForestClassifier
