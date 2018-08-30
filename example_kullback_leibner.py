@@ -7,7 +7,7 @@ from sklearn.datasets import make_gaussian_quantiles, make_classification, make_
 
 from gen_datasets import *
 
-X,y,w, w_min = gauss_easy(n_samples_bsm=1600, n_samples_sm= 1200)
+X,y,w, w_min = guass_easy(n_samples_bsm=1600, n_samples_sm= 1200)
 #X,y,w, w_min = exponential_easy(n_samples_bsm=8, n_samples_sm= 6)
 
 from kullback_leibner_divergence_criterion import KullbackLeibnerCriterion

@@ -82,9 +82,10 @@ def gauss_hard(n_samples_bsm, n_samples_sm):
     return X, y, w, w_min
 
 def exponential_easy(n_samples_bsm, n_samples_sm):
-    lambda_sm = 20
-    lambda_bsm = 15
-    weight_increase = 100
+    assert False, "exponential function is not ready to use, crashes the whole pc"
+    lambda_sm = 2.0
+    lambda_bsm = 1.5
+
     X1 = make_exponential_lambda(lambda_bsm, n_samples_bsm)
     X2 = make_exponential_lambda(lambda_sm, n_samples_sm)
 
@@ -104,11 +105,12 @@ def exponential_easy(n_samples_bsm, n_samples_sm):
     w_alt_hyp = np.zeros(len(X1))
     w_hyp = np.zeros(len(X2))
     for i in range(0,len(X1)):
-        w = calc_exponential_lambda(lambda_bsm, X1[i][0] / weight_increase) * calc_exponential_lambda(lambda_bsm, X1[i][1] / weight_increase)
-        w_alt_hyp[i] = w / (lambda_bsm * weight_increase)
+        w = np.sqrt(calc_exponential_lambda(lambda_bsm, X1[i][0]) * calc_exponential_lambda(lambda_bsm, X1[i][1]))
+#Wurzel"!""
+        w_alt_hyp[i] = w / (lambda_bsm) # * weight_increase)
     for i in range(0, len(X2) -1):
-        w = calc_exponential_lambda(lambda_sm, X2[i][0] / weight_increase) * calc_exponential_lambda(lambda_sm, X2[i][1] / weight_increase)
-        w_hyp[i] = w / (lambda_sm * weight_increase)
+        w = np.sqrt(calc_exponential_lambda(lambda_sm, X2[i][0]) * calc_exponential_lambda(lambda_sm, X2[i][1]))
+        w_hyp[i] = w / (lambda_sm) # * weight_increase)
     #w_alt_hyp /= lambda_bsm
     #w_hyp /= lambda_sm
     w0 = np.concatenate((w_alt_hyp, w_hyp))
@@ -119,12 +121,12 @@ def exponential_easy(n_samples_bsm, n_samples_sm):
     w_hyp = np.zeros(len(X1))
 
     for i in range(0,len(X2) -1):
-        w = calc_exponential_lambda(lambda_sm, X2[i][0] / weight_increase) * calc_exponential_lambda(lambda_sm, X2[i][1] / weight_increase)
+        w = np.sqrt(calc_exponential_lambda(lambda_sm, X2[i][0] ) * calc_exponential_lambda(lambda_sm, X2[i][1] ))
         print "calc e l" + str(calc_exponential_lambda(lambda_sm, X2[i][0]))
-        w_alt_hyp[i] = w / (lambda_sm * weight_increase)
+        w_alt_hyp[i] = w / (lambda_sm) # * weight_increase)
     for i in range(0, len(X1) -1):
-        w = calc_exponential_lambda(lambda_bsm, X1[i][0] / weight_increase) * calc_exponential_lambda(lambda_bsm, X1[i][1] / weight_increase)
-        w_hyp[i] = w / (lambda_bsm * weight_increase)
+        w = np.sqrt(calc_exponential_lambda(lambda_bsm, X1[i][0] ) * calc_exponential_lambda(lambda_bsm, X1[i][1] ))
+        w_hyp[i] = w / (lambda_bsm) # * weight_increase)
     #w_alt_hyp /= lambda_sm
     #w_hyp /= lambda_bsm
 
@@ -136,14 +138,14 @@ def exponential_easy(n_samples_bsm, n_samples_sm):
     w_min = np.amin(w[np.where(w > 0.0)]) #+ EPSILON
     EPSILON = w_min / 100.0
     w[np.where(w == 0.0)] += EPSILON
-    print "X:"
+
+    print "X"
     print X
-    print "y:"
+    print "y"
     print y
-    print "w:"
+    print "w"
     print w
-    print "w_min"
-    print w_min
+
     return X, y, w, w_min
 
 def make_exponential_lambda(l, n_samples):
