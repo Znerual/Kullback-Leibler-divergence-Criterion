@@ -1,23 +1,29 @@
+# Standard imports 
 import numpy as np
-
+import os
 import matplotlib
 matplotlib.use('Agg')
 import matplotlib.pyplot as plt
 
+# sklearn
 from sklearn.ensemble import AdaBoostClassifier, RandomForestClassifier
 from sklearn.tree import DecisionTreeClassifier
 from sklearn.datasets import make_gaussian_quantiles, make_classification, make_blobs
 
+#generated data
 from gen_datasets import *
 
+# TTXPheno
+from TTXPheno.Tools.user import plot_directory 
+
 X,y,w, w_min = gauss_easy(n_samples_bsm=400, n_samples_sm= 300)
-#X,y,w, w_min = exponential_easy(n_samples_bsm=8, n_samples_sm= 6)
+
 
 from kullback_leibner_divergence_criterion import KullbackLeibnerCriterion
 kldc = KullbackLeibnerCriterion(1, np.array([2], dtype='int64'))
 
 #Create the tree
-dt = DecisionTreeClassifier(max_depth=8, criterion=kldc)
+dt = DecisionTreeClassifier(max_depth=2, criterion=kldc)
 
 # Create and fit an AdaBoosted decision tree
 bdt = AdaBoostClassifier(dt,
@@ -88,8 +94,6 @@ plt.title('Decision Scores')
 plt.tight_layout()
 plt.subplots_adjust(wspace=0.35)
 
-import os
-uppath = lambda _path, n: os.sep.join(_path.split(os.sep)[:-n])
-print ps.path.abspath("./")
-#plt.savefig("/../../../../../../../../../../../www/plot.png")
+
+plt.savefig(os.path.join( plot_directory, 'plot.png'))
 #plt.show()
