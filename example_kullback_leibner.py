@@ -1,4 +1,7 @@
 import numpy as np
+
+import matplotlib
+matplotlib.use('Agg')
 import matplotlib.pyplot as plt
 
 from sklearn.ensemble import AdaBoostClassifier, RandomForestClassifier
@@ -7,7 +10,7 @@ from sklearn.datasets import make_gaussian_quantiles, make_classification, make_
 
 from gen_datasets import *
 
-X,y,w, w_min = guass_easy(n_samples_bsm=1600, n_samples_sm= 1200)
+X,y,w, w_min = gauss_easy(n_samples_bsm=400, n_samples_sm= 300)
 #X,y,w, w_min = exponential_easy(n_samples_bsm=8, n_samples_sm= 6)
 
 from kullback_leibner_divergence_criterion import KullbackLeibnerCriterion
@@ -84,4 +87,9 @@ plt.title('Decision Scores')
 
 plt.tight_layout()
 plt.subplots_adjust(wspace=0.35)
-plt.show()
+
+import os
+uppath = lambda _path, n: os.sep.join(_path.split(os.sep)[:-n])
+print ps.path.abspath("./")
+#plt.savefig("/../../../../../../../../../../../www/plot.png")
+#plt.show()

@@ -152,4 +152,4 @@ def make_exponential_lambda(l, n_samples):
     return np.random.exponential(l, (n_samples,2))
 def calc_exponential_lambda(l,x):
     return (l * np.exp(-l * x))
-exponential_easy(4,4)
+#exponential_easy(4,4)
