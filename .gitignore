@@ -1,4 +1,6 @@
 *.txt
 *.c
 *.so
+*.pyc
 /build
+/ttz_data

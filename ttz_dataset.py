@@ -1,3 +1,4 @@
+import ROOT
 # load datasets
 from TTXPheno.samples.benchmarks         import *
 
@@ -7,6 +8,9 @@ sample = fwlite_ttZ_ll_LO_order2_15weights_ref_CMS
 
 # RootTools
 from RootTools.core.standard import *
+
+# Directories
+from TTXPheno.Tools.user import plot_directory, tmp_directory
 
 #numpy
 import numpy as np
@@ -31,9 +35,11 @@ logger = Logger.get_logger(args.logLevel, logFile = None)
 #Output directory and makeing the dataset small
 if args.small:
     args.version += '_small'
-    sample.reduceFiles( to = 1 )
+    sample.reduceFiles( to = 10 )
 
-output_dir = os.path.join('ttz_data', args.version)
+args.version += '.h5'
+
+output_dir = os.path.join(tmp_directory, args.version)
 if not os.path.exists(output_dir):
     os.makedirs( output_dir )
 
@@ -47,7 +53,7 @@ w.set_order(2)
 # function that evaluates the weight of the SM hypothesis
 sm_weight = w.get_weight_func()
 # function that evaluates the weight of the BSM hypothesis
-bsm_weight = w.get_weight_func(ctZ = 4)
+bsm_weight = w.get_weight_func(ctGI=10)
 
 selectionString = "Sum$(genLep_pt>10&&(abs(genLep_pdgId)==11||abs(genLep_pdgId)==13)&&abs(genLep_eta)<2.5)==3&&Sum$(genLep_pt>20&&(abs(genLep_pdgId)==11||abs(genLep_pdgId)==13)&&abs(genLep_eta)<2.5)>=2&&Sum$(genLep_pt>40&&(abs(genLep_pdgId)==11||abs(genLep_pdgId)==13)&&abs(genLep_eta)<2.5)>=1&&abs(genZ_mass-91.2)<=10&&Sum$(genJet_pt>30&&abs(genJet_eta)<2.4)>=3&&Sum$(genJet_pt>30&&genJet_matchBParton>=1&&abs(genJet_eta)<2.4)>=1&&genZ_pt>=0"
 sample.setSelectionString( selectionString ) 
@@ -69,7 +75,7 @@ spectator_variables = {
 
 
 #setup the .h5 file
-datadict = {key : [] for key in  training_variables.keys() + spectator_variables.keys() }
+datadict = {key : [] for key in  training_variables.keys() }
 datadict['sm_weight'] = []
 datadict['bsm_weight'] = []
 #datadict['target'] = []
@@ -84,6 +90,10 @@ reader = sample.treeReader( variables = read_variables )
 reader.start()
 
     #y = 0, sm
+ptz_sm = ROOT.TH1F('ptZ_sm', 'ptZ_sm', 50,0,1000)
+ptz_bsm = ROOT.TH1F('ptZ_bsm', 'ptZ_bsm', 50,0,1000)
+cosTheta_sm = ROOT.TH1F('cosThetaStar_sm', 'cosThetaStar_sm', 0.05, -1,1 )
+cosTheta_bsm = ROOT.TH1F('cosThetaStar_bsm', 'cosThetaStar_bsm', 0.05, -1,1 )
 while reader.run():
     prefac = lumi*reader.event.ref_lumiweight1fb/sample.reduce_files_factor
     
@@ -95,12 +105,18 @@ while reader.run():
     assert (sm_tmp_weight > 0 and bsm_tmp_weight > 0),"Weight ist null in ttz_dataset"  
     
     #add events and weight to the dictionary
-    for dictionary in training_variables, spectator_variables:
-        for key, lambda_function in dictionary.iteritems():
-                datadict[key].append( lambda_function(reader.event) )
+    #for dictionary in training_variables:
+    for key, lambda_function in training_variables.iteritems():
+        datadict[key].append( lambda_function(reader.event) )
+
     datadict['sm_weight'].append(sm_tmp_weight)
     datadict['bsm_weight'].append(bsm_tmp_weight) 
-        
+    
+    ptz_sm.Fill( reader.event.genZ_pt, sm_tmp_weight )       
+    ptz_bsm.Fill( reader.event.genZ_pt, bsm_tmp_weight )
+
+    cosTheta_sm.Fill( reader.event.genZ_cosThetaStar, sm_tmp_weight)
+    cosTheta_bsm.Fill( reader.event.genZ_cosThetaStar, bsm_tmp_weight)       
     #add  target to the list
     #datadict['target'].append(0)
     #datadict['target'].append(1)
@@ -112,7 +128,7 @@ while reader.run():
         df.index = pd.RangeIndex(start=lastsavedindex, stop=i,step=1)
         df.to_hdf( os.path.join(output_dir, 'data.h5'), key='df', format='table', append='True', mode='a') 
         #emptying the datadic 
-        datadict = {key : [] for key in  training_variables.keys() + spectator_variables.keys() }
+        datadict = {key : [] for key in  training_variables.keys() }
         datadict['sm_weight'] = []
         datadict['bsm_weight'] = []
         #datadict['target'] = []
@@ -122,8 +138,9 @@ while reader.run():
 df = pd.DataFrame(datadict)
 df.index = pd.RangeIndex(start=lastsavedindex, stop=i,step=1)
 df.to_hdf( os.path.join(output_dir, 'data.h5'), key='df', format='table', append='True', mode='a') 
+
 #emptying the datadic 
-datadict = {key : [] for key in  training_variables.keys() + spectator_variables.keys() }
+datadict = {key : [] for key in  training_variables.keys() }
 datadict['sm_weight'] = []
 datadict['bsm_weight'] = []
 #datadict['target'] = []
@@ -131,3 +148,32 @@ lastsavedindex = i
 
 logger.info( "Written drectory %s", output_dir)
 
+ptz_sm.style = styles.lineStyle( ROOT.kBlue)
+ptz_bsm.style = styles.lineStyle( ROOT.kRed)
+cosTheta_sm.style = styles.lineStyle( ROOT.kBlue)
+cosTheta_bsm.style = styles.lineStyle( ROOT.kRed)
+
+
+plot = Plot.fromHisto("ptz",
+                [[ptz_sm],[ptz_bsm]],
+                #texX = "p_{T}(Z) (GeV)"
+                texX = "p_{T}(Z) (GeV)"
+            )
+
+plotting.draw( plot,
+    plot_directory = os.path.join( plot_directory ), 
+    logX = False, logY = True, sorting = False, 
+    copyIndexPHP = False
+)
+
+plot = Plot.fromHisto("CosTheta",
+                [[cosTheta_sm],[cosTheta_bsm]],
+                #texX = "p_{T}(Z) (GeV)"
+                texX = "cos(\Theta) "
+            )
+
+plotting.draw( plot,
+    plot_directory = os.path.join( plot_directory ), 
+    logX = False, logY = False, sorting = False, 
+    copyIndexPHP = False
+)
