@@ -12,12 +12,19 @@ from sklearn.datasets import make_gaussian_quantiles, make_classification, make_
 
 #generated data
 from gen_datasets import *
+from ttz_dataset import ttz_dataset
 
 # TTXPheno
 from TTXPheno.Tools.user import plot_directory 
 
-X,y,w, w_min = gauss_easy(n_samples_bsm=400, n_samples_sm= 300)
+#X,y,w, w_min = gauss_easy(n_samples_bsm=400, n_samples_sm= 300)
+X,y,w,w_min = ttz_dataset()
+print X[:2]
+print y[:2]
+print w[:2]
+print w_min
 
+#assert False, "End of test reached"
 
 from kullback_leibner_divergence_criterion import KullbackLeibnerCriterion
 kldc = KullbackLeibnerCriterion(1, np.array([2], dtype='int64'))
@@ -67,8 +74,8 @@ for i, n, c in zip(range(2), class_names, plot_colors):
 plt.xlim(x_min, x_max)
 plt.ylim(y_min, y_max)
 plt.legend(loc='upper right')
-plt.xlabel('x')
-plt.ylabel('y')
+plt.xlabel('P')
+plt.ylabel('Cos(Theta*)')
 plt.title('Decision Boundary')
 
 # Plot the two-class decision scores
@@ -95,5 +102,5 @@ plt.tight_layout()
 plt.subplots_adjust(wspace=0.35)
 
 
-plt.savefig(os.path.join( plot_directory, 'plot.png'))
+plt.savefig(os.path.join( plot_directory, 'Kullback-Leibner-Plots','fist-ttz.png'))
 #plt.show()
