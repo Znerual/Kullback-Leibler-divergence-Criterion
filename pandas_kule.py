@@ -57,6 +57,7 @@ w0 = np.array(df['sm_weight'])
 w1 = np.array(df['bsm_weight'])
 w = np.concatenate((w0,w1))
 
+#train
 bdt.fit(X, y, w)
 
 #from sklearn.ensemble import RandomForestClassifier
@@ -101,6 +102,8 @@ plt.figure(figsize=(10, 5))
 
 # Plot the two-class decision scores
 #twoclass_output = bdt.decision_function(X[np.where(w> w_min)])
+
+#Plot the Histogramm for the number of Events over genZ_p..
 plot_weights = [w0,w1]
 plt.subplot(121)
 plot_range = (np.amin(X), np.amax(X))
@@ -119,6 +122,7 @@ plt.xlabel('p_T(Z) (GeV)')
 plt.title('Weighted p_T(Z)')
 plt.legend(loc='upper right')
 
+#Plot the decision diagram
 twoclass_output = bdt.decision_function(X)
 
 plot_range = (twoclass_output.min(), twoclass_output.max())
@@ -142,6 +146,10 @@ plt.title('Decision Scores')
 plt.tight_layout()
 plt.subplots_adjust(wspace=0.35)
 
+#get the output directory
+output_directory = os.path.join(plot_directory,'Kullback-Leibner-Plots', argParser.prog.split('.')[0])
+if not os.path.exists(output_directory):
+    os.makedirs(output_directory)
 
-plt.savefig(os.path.join( plot_directory, 'Kullback-Leibner-Plots','pandas-ttz.png'))
-#plt.show()
+#save the plot
+plt.savefig(os.path.join( output_directory,'pandas-ttz' + args.version + '.png'))

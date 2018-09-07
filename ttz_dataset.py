@@ -77,11 +77,11 @@ spectator_variables = {
 datadict = {key : [] for key in  training_variables.keys() }
 datadict['sm_weight'] = []
 datadict['bsm_weight'] = []
-#datadict['target'] = []
 
 df = pd.DataFrame(datadict)
 df.to_hdf(os.path.join( output_dir, 'data.h5'), key = 'df', format='table', mode='w')
 
+#setup for chunking
 i = 0
 lastsavedindex = 0
 
@@ -107,7 +107,6 @@ while reader.run():
     assert (sm_tmp_weight > 0 and bsm_tmp_weight > 0),"Weight ist null in ttz_dataset"  
     
     #add events and weight to the dictionary
-    #for dictionary in training_variables:
     for key, lambda_function in training_variables.iteritems():
         datadict[key].append( lambda_function(reader.event) )
 
@@ -119,24 +118,22 @@ while reader.run():
 
     cosTheta_sm.Fill( reader.event.genZ_cosThetaStar, sm_tmp_weight)
     cosTheta_bsm.Fill( reader.event.genZ_cosThetaStar, bsm_tmp_weight)       
-    #add  target to the list
-    #datadict['target'].append(0)
-    #datadict['target'].append(1)
     
     i += 1
     #chunking
     if not i % args.chunksize:
+        #save a chunk
         df = pd.DataFrame(datadict)
         df.index = pd.RangeIndex(start=lastsavedindex, stop=i,step=1)
         df.to_hdf( os.path.join(output_dir, 'data.h5'), key='df', format='table', append='True', mode='a') 
+       
         #emptying the datadic 
         datadict = {key : [] for key in  training_variables.keys() }
         datadict['sm_weight'] = []
         datadict['bsm_weight'] = []
-        #datadict['target'] = []
         lastsavedindex = i
      
-
+#save the rest
 df = pd.DataFrame(datadict)
 df.index = pd.RangeIndex(start=lastsavedindex, stop=i,step=1)
 df.to_hdf( os.path.join(output_dir, 'data.h5'), key='df', format='table', append='True', mode='a') 
@@ -145,17 +142,20 @@ df.to_hdf( os.path.join(output_dir, 'data.h5'), key='df', format='table', append
 datadict = {key : [] for key in  training_variables.keys() }
 datadict['sm_weight'] = []
 datadict['bsm_weight'] = []
-#datadict['target'] = []
 lastsavedindex = i
 
 logger.info( "Written drectory %s", output_dir)
 
+#setting up the plot colors
 ptz_sm.style = styles.lineStyle( ROOT.kBlue)
 ptz_bsm.style = styles.lineStyle( ROOT.kRed)
 cosTheta_sm.style = styles.lineStyle( ROOT.kBlue)
 cosTheta_bsm.style = styles.lineStyle( ROOT.kRed)
 
+#Outputdirectory
+output_directory = os.path.join(plot_directory, 'Kullback-Leibner-Plots', argParser.prog.split('.')[0])
 
+#draw the plots
 plot = Plot.fromHisto("ptz",
                 [[ptz_sm],[ptz_bsm]],
                 #texX = "p_{T}(Z) (GeV)"
@@ -163,7 +163,7 @@ plot = Plot.fromHisto("ptz",
             )
 
 plotting.draw( plot,
-    plot_directory = os.path.join( plot_directory ), 
+    plot_directory = output_directory, 
     logX = False, logY = True, sorting = False, 
     copyIndexPHP = False
 )
@@ -175,7 +175,7 @@ plot = Plot.fromHisto("CosTheta",
             )
 
 plotting.draw( plot,
-    plot_directory = os.path.join( plot_directory ), 
+    plot_directory = output_directory, 
     logX = False, logY = False, sorting = False, 
     copyIndexPHP = False
 )
