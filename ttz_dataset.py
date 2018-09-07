@@ -18,9 +18,9 @@ import pandas as pd
 import argparse
 argParser = argparse.ArgumentParser(description = "Argument Parser")
 argParser.add_argument('--logLevel', action='store', default='INFO', nargs='?', choices=['CRITICAL', 'ERROR', 'WARNING', 'INFO', 'DEBUG', 'TRACE', 'NOTSET'], help="Log level for logging")
-argParser.add_argument'--small', action='store_true', help='Run only a subset')
+argParser.add_argument('--small', action='store_true', help='Run only a subset')
 argParser.add_argument('--version', action='store', default='v1')
-argParser.add_argument('--chuncksize', action='store',  default='100000', type=int)
+argParser.add_argument('--chunksize', action='store',  default='100000', type=int)
 args = argParser.parse_args()
 
 #Logger
@@ -34,7 +34,7 @@ if args.small:
     sample.reduceFiles( to = 1 )
 
 output_dir = os.path.join('ttz_data', args.version)
-if not os.path.exits(output_dir):
+if not os.path.exists(output_dir):
     os.makedirs( output_dir )
 
 # lumi
@@ -54,7 +54,7 @@ sample.setSelectionString( selectionString )
 
 # Define variables
 file_read_variables = [ "genZ_pt/F", "genZ_eta/F", "genZ_phi/F", "genZ_mass/F", "genZ_cosThetaStar/F", "ref_lumiweight1fb/F" ]
-read_variables = map( TreeVariable.fromString, files_read_variables)
+read_variables = map( TreeVariable.fromString, file_read_variables)
 read_variables.append( VectorTreeVariable.fromString('p[C/F]', nMax=2000) )
 
 training_variables = {
@@ -70,6 +70,10 @@ spectator_variables = {
 
 #setup the .h5 file
 datadict = {key : [] for key in  training_variables.keys() + spectator_variables.keys() }
+datadict['sm_weight'] = []
+datadict['bsm_weight'] = []
+#datadict['target'] = []
+
 df = pd.DataFrame(datadict)
 df.to_hdf(os.path.join( output_dir, 'data.h5'), key = 'df', format='table', mode='w')
 
@@ -98,8 +102,8 @@ while reader.run():
     datadict['bsm_weight'].append(bsm_tmp_weight) 
         
     #add  target to the list
-    datadict['target'].append(0)
-    datadict['target'].append(1)
+    #datadict['target'].append(0)
+    #datadict['target'].append(1)
     
     i += 1
     #chunking
@@ -109,6 +113,9 @@ while reader.run():
         df.to_hdf( os.path.join(output_dir, 'data.h5'), key='df', format='table', append='True', mode='a') 
         #emptying the datadic 
         datadict = {key : [] for key in  training_variables.keys() + spectator_variables.keys() }
+        datadict['sm_weight'] = []
+        datadict['bsm_weight'] = []
+        #datadict['target'] = []
         lastsavedindex = i
      
 
@@ -117,6 +124,9 @@ df.index = pd.RangeIndex(start=lastsavedindex, stop=i,step=1)
 df.to_hdf( os.path.join(output_dir, 'data.h5'), key='df', format='table', append='True', mode='a') 
 #emptying the datadic 
 datadict = {key : [] for key in  training_variables.keys() + spectator_variables.keys() }
+datadict['sm_weight'] = []
+datadict['bsm_weight'] = []
+#datadict['target'] = []
 lastsavedindex = i
 
 logger.info( "Written drectory %s", output_dir)
