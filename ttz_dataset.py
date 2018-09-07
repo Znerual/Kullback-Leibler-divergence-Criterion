@@ -89,10 +89,10 @@ reader = sample.treeReader( variables = read_variables )
 reader.start()
 
     #y = 0, sm
-ptz_sm = ROOT.TH1F('ptZ_sm', 'ptZ_sm', 50,0,1000)
-ptz_bsm = ROOT.TH1F('ptZ_bsm', 'ptZ_bsm', 50,0,1000)
-cosTheta_sm = ROOT.TH1F('cosThetaStar_sm', 'cosThetaStar_sm', 50, -1,1 )
-cosTheta_bsm = ROOT.TH1F('cosThetaStar_bsm', 'cosThetaStar_bsm', 50, -1,1 )
+ptz_sm = ROOT.TH1F('ptZ_sm'+args.version, 'ptZ_sm'+args.version , 50,0,1000)
+ptz_bsm = ROOT.TH1F('ptZ_bsm'+args.version , 'ptZ_bsm'+args.version, 50,0,1000)
+cosTheta_sm = ROOT.TH1F('cosThetaStar_sm'+args.version, 'cosThetaStar_sm'+args.version, 50, -1,1 )
+cosTheta_bsm = ROOT.TH1F('cosThetaStar_bsm'+args.version, 'cosThetaStar_bsm'+args.version, 50, -1,1 )
 while reader.run():
     if args.small:
         prefac = lumi*reader.event.ref_lumiweight1fb/sample.reduce_files_factor
@@ -156,7 +156,7 @@ cosTheta_bsm.style = styles.lineStyle( ROOT.kRed)
 output_directory = os.path.join(plot_directory, 'Kullback-Leibner-Plots', argParser.prog.split('.')[0])
 
 #draw the plots
-plot = Plot.fromHisto("ptz",
+plot = Plot.fromHisto("ptz"+args.version,
                 [[ptz_sm],[ptz_bsm]],
                 #texX = "p_{T}(Z) (GeV)"
                 texX = "p_{T}(Z) (GeV)"
@@ -168,7 +168,7 @@ plotting.draw( plot,
     copyIndexPHP = False
 )
 
-plot = Plot.fromHisto("CosTheta",
+plot = Plot.fromHisto("CosTheta"+args.version,
                 [[cosTheta_sm],[cosTheta_bsm]],
                 #texX = "p_{T}(Z) (GeV)"
                 texX = "cos(\Theta) "

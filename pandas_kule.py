@@ -19,8 +19,9 @@ import argparse
 argParser = argparse.ArgumentParser(description = "Argument Parser")
 argParser.add_argument('--logLevel', action='store', default='INFO', nargs='?', choices=['CRITICAL', 'ERROR', 'WARNING', 'INFO', 'DEBUG', 'TRACE', 'NOTSET'], help="Log level for logging")
 argParser.add_argument('--small', action='store_true', help='Use the small dataset')
-argParser.add_argument('--version', action='store',default='v1')
 argParser.add_argument('--data', action='store',default='data.h5')
+argParser.add_argument('--data_version', action='store',default='v1',help='Version of the data to be used')
+argParser.add_argument('--version', action='store',default='v1',help='Version of the Script')
 args = argParser.parse_args()
 
 #Logger
@@ -32,9 +33,9 @@ from kullback_leibner_divergence_criterion import KullbackLeibnerCriterion
 kldc = KullbackLeibnerCriterion(1, np.array([2], dtype='int64'))
 
 if args.small:
-    args.version += '_small'
+    args.data_version += '_small'
 #find directory
-input_directory = os.path.join(tmp_directory, args.version)
+input_directory = os.path.join(tmp_directory, args.data_version)
 #Create the tree
 dt = DecisionTreeClassifier(max_depth=2, criterion=kldc)
 
