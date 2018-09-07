@@ -37,7 +37,6 @@ if args.small:
     args.version += '_small'
     sample.reduceFiles( to = 10 )
 
-args.version += '.h5'
 
 output_dir = os.path.join(tmp_directory, args.version)
 if not os.path.exists(output_dir):
@@ -92,11 +91,14 @@ reader.start()
     #y = 0, sm
 ptz_sm = ROOT.TH1F('ptZ_sm', 'ptZ_sm', 50,0,1000)
 ptz_bsm = ROOT.TH1F('ptZ_bsm', 'ptZ_bsm', 50,0,1000)
-cosTheta_sm = ROOT.TH1F('cosThetaStar_sm', 'cosThetaStar_sm', 0.05, -1,1 )
-cosTheta_bsm = ROOT.TH1F('cosThetaStar_bsm', 'cosThetaStar_bsm', 0.05, -1,1 )
+cosTheta_sm = ROOT.TH1F('cosThetaStar_sm', 'cosThetaStar_sm', 50, -1,1 )
+cosTheta_bsm = ROOT.TH1F('cosThetaStar_bsm', 'cosThetaStar_bsm', 50, -1,1 )
 while reader.run():
-    prefac = lumi*reader.event.ref_lumiweight1fb/sample.reduce_files_factor
-    
+    if args.small:
+        prefac = lumi*reader.event.ref_lumiweight1fb/sample.reduce_files_factor
+    else:
+        prefac = lumi*reader.event.ref_lumiweight1fb
+        
     #calculate the weights and skip negativs
     sm_tmp_weight = prefac * sm_weight(reader.event, sample) 
     bsm_tmp_weight = prefac * bsm_weight(reader.event, sample) 

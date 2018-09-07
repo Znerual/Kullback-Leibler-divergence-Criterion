@@ -101,6 +101,24 @@ plt.figure(figsize=(10, 5))
 
 # Plot the two-class decision scores
 #twoclass_output = bdt.decision_function(X[np.where(w> w_min)])
+plot_weights = [w0,w1]
+plt.subplot(121)
+plot_range = (np.amin(X), np.amax(X))
+for i, n, c in zip(range(2), class_names, plot_colors):
+    plt.hist(df['genZ_pt/F'],
+        bins=50, 
+        range=plot_range, 
+        weights=plot_weights[i],
+        facecolor=c,
+        label='%s Data' % n,
+        alpha=.5,
+        edgecolor='k',
+        log=True)
+plt.ylabel('Number of Events')
+plt.xlabel('p_T(Z) (GeV)')
+plt.title('Weighted p_T(Z)')
+plt.legend(loc='upper right')
+
 twoclass_output = bdt.decision_function(X)
 
 plot_range = (twoclass_output.min(), twoclass_output.max())
