@@ -21,8 +21,10 @@ argParser.add_argument('--logLevel', action='store', default='INFO', nargs='?', 
 argParser.add_argument('--small', action='store_true', help='Use the small dataset')
 argParser.add_argument('--data', action='store',default='data.h5')
 argParser.add_argument('--data_version', action='store',default='v1',help='Version of the data to be used')
-argParser.add_argument('--version', action='store',default='v1',help='Version of the Script')
 args = argParser.parse_args()
+
+#Set the version of the script
+version = 'v1'
 
 #Logger
 import RootTools.core.logger as Logger
@@ -153,4 +155,4 @@ if not os.path.exists(output_directory):
     os.makedirs(output_directory)
 
 #save the plot
-plt.savefig(os.path.join( output_directory,'pandas-ttz' + args.version + '.png'))
+plt.savefig(os.path.join( output_directory,'pandas-ttz' + version + '.png'))
