@@ -159,23 +159,25 @@ output_directory = os.path.join(plot_directory, 'Kullback-Leibner-Plots', argPar
 plot = Plot.fromHisto("ptz"+args.version,
                 [[ptz_sm],[ptz_bsm]],
                 #texX = "p_{T}(Z) (GeV)"
-                texX = "p_{T}(Z) (GeV)"
+                texX = "p_{T}(Z) (GeV)",
             )
 
 plotting.draw( plot,
     plot_directory = output_directory, 
     logX = False, logY = True, sorting = False, 
-    copyIndexPHP = False
+    copyIndexPHP = False,
+    scaling = {1:0},
 )
 
 plot = Plot.fromHisto("CosTheta"+args.version,
                 [[cosTheta_sm],[cosTheta_bsm]],
                 #texX = "p_{T}(Z) (GeV)"
-                texX = "cos(\Theta) "
+                texX = "cos(\Theta)",
             )
 
 plotting.draw( plot,
     plot_directory = output_directory, 
     logX = False, logY = False, sorting = False, 
-    copyIndexPHP = False
+    copyIndexPHP = False,
+    scaling = {1:0},
 )

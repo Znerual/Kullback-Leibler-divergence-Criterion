@@ -86,7 +86,6 @@ bdt.fit(X, y, w)
 
 print('distance score: ', bdt.score(X, y))
 
-
 #get the output directory
 output_directory = os.path.join(plot_directory,'Kullback-Leibner-Plots', argParser.prog.split('.')[0])
 if not os.path.exists(output_directory):
@@ -176,7 +175,6 @@ plt.title('Decision Scores')
 
 plt.tight_layout()
 plt.subplots_adjust(wspace=0.35)
-
 
 
 #Draw the same plots with Theta Star
