@@ -3,24 +3,25 @@
 # Base on the work from Evgeni Dubov <evgeni.dubov@gmail.com>
 #
 # License: MIT
-
+#sklearn imports
 from sklearn.tree._criterion cimport ClassificationCriterion
 from sklearn.tree._criterion cimport SIZE_t
+from sklearn.tree._utils cimport log
 
+#default imports
 import numpy as np
 cdef double INFINITY = np.inf
 
+#math imports
 from libc.math cimport sqrt, pow
 from libc.math cimport abs
 
-from sklearn.tree._utils cimport log
+
 
 choice = 'kule'
-
 cdef class KullbackLeibnerCriterion(ClassificationCriterion):
-
     cdef double node_impurity(self) nogil:
-
+        
         cdef SIZE_t* n_classes = self.n_classes
         cdef double* sum_total = self.sum_total
         cdef double kule    = 0.0
@@ -37,7 +38,7 @@ cdef class KullbackLeibnerCriterion(ClassificationCriterion):
         with gil:
           assert self.n_outputs == 1,    "Only one output with Kullback-Leibner Criterion"
           assert self.n_classes[0] == 2, "Only two classes with Kullback-Leibner Criterion"
-
+        
         for k in range(self.n_outputs):
             # Gini
             sq_count = 0.0
@@ -80,7 +81,7 @@ cdef class KullbackLeibnerCriterion(ClassificationCriterion):
             print "  sum_total[0] %6.4f sum_total[1] %6.4f" %( sum_total[0], sum_total[1] )
             print "  weighted_n_node_samples %6.4f" %( self.weighted_n_node_samples )
             print "  rho %6.4f rho_0 %6.4f" %( rho, rho_0 )
-
+            
             if choice == 'gini':
                 return gini / self.n_outputs
             elif choice == 'kule':
