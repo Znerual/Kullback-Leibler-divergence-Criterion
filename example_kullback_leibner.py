@@ -12,13 +12,13 @@ from sklearn.datasets import make_gaussian_quantiles, make_classification, make_
 
 #generated data
 from gen_datasets import *
-from ttz_dataset import ttz_dataset
+#from ttz_dataset import ttz_dataset
 
 # TTXPheno
 from TTXPheno.Tools.user import plot_directory 
 
-#X,y,w, w_min = gauss_easy(n_samples_bsm=400, n_samples_sm= 300)
-X,y,w,w_min = ttz_dataset()
+X,y,w, w_min = gauss_easy(n_samples_bsm=400, n_samples_sm= 300)
+#X,y,w,w_min = ttz_dataset()
 print X[:2]
 print y[:2]
 print w[:2]
@@ -43,6 +43,8 @@ bdt.fit(X, y, w)
 #bdt.fit(X, y)
 
 print('distance score: ', bdt.score(X, y))
+
+assert False, "End of test"
 
 plot_colors = "br"
 plot_step = 0.02

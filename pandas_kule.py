@@ -10,7 +10,7 @@ import pandas as pd
 from sklearn.ensemble import AdaBoostClassifier, RandomForestClassifier
 from sklearn.tree import DecisionTreeClassifier
 from sklearn.datasets import make_gaussian_quantiles, make_classification, make_blobs
-
+from sklearn.externals import joblib
 # TTXPheno
 from TTXPheno.Tools.user import plot_directory, tmp_directory
 
@@ -22,10 +22,14 @@ argParser.add_argument('--small', action='store_true', help='Use the small datas
 argParser.add_argument('--data', action='store',default='data.h5')
 argParser.add_argument('--data_version', action='store',default='v1',help='Version of the data to be used')
 argParser.add_argument('--log_plot', action='store_true',help='Use a logarithmic plot')
+argParser.add_argument('--save', action='store_true', help='Write the trained BDT to a file')
+argParser.add_argument('--criterion', action='store', default='kule', nargs='?', choices=['gini', 'kule', 'entropy'] , help="Select the Criterion to be used")
 args = argParser.parse_args()
 
 #Set the version of the script
-version = 'v4-v5'
+version = 'v6'
+
+#set criterion, you can choose from (gini, kule, entropy, hellinger)
 
 #Logger
 import RootTools.core.logger as Logger
@@ -35,18 +39,26 @@ logger = Logger.get_logger(args.logLevel, logFile = None)
 from kullback_leibner_divergence_criterion import KullbackLeibnerCriterion
 kldc = KullbackLeibnerCriterion(1, np.array([2], dtype='int64'))
 
+
 if args.small:
     args.data_version += '_small'
     version += '_small'
 if args.log_plot:
     version += '_log'
+version += args.criterion
 #find directory
 input_directory = os.path.join(tmp_directory, args.data_version)
 logger.debug('Import data from %s', input_directory)
 
 #Create the tree
-dt = DecisionTreeClassifier(max_depth=2, criterion=kldc)
-
+if args.criterion == 'kule':
+    dt = DecisionTreeClassifier(max_depth=2, criterion=kldc)
+elif args.criterion == 'gini':
+    dt = DecisionTreeClassifier(max_depth=2, criterion='gini')
+elif args.criterion == 'entropy':    
+    dt = DecisionTreeClassifier(max_depth=2, criterion='entropy')
+else:
+    assert False, "You choose the wrong Classifier"
 # Create and fit an AdaBoosted decision tree
 bdt = AdaBoostClassifier(dt,
                          algorithm="SAMME",
@@ -73,16 +85,21 @@ w = np.concatenate((w0,w1))
 weight_mean = np.mean([sm_weight_mean, bsm_weight_mean])
 weight_mean_array = np.full([len(w0)], weight_mean)
 
-#print weight_mean_array.shape
-#print w.shape
-#assert False, "End"
 logger.info('Mean of sm_weights: %f, mean of bsm_weights: %f',sm_weight_mean, bsm_weight_mean  )
+
 #train
 bdt.fit(X, y, w)
 
-#from sklearn.ensemble import RandomForestClassifier
-#bdt = RandomForestClassifier(criterion=kldc, max_depth=2, n_estimators=100)
-#bdt.fit(X, y)
+#save to file
+if args.save:
+    #get the directory
+    output_dir = os.path.join(tmp_directory, args.data_version)
+    if not os.path.exists(output_dir):
+        os.makedirs( output_dir)
+    logger.info("Save the trained plot to %s, it uses the %s criterion", output_dir, args.criterion)
+    joblib.dump(bdt,  os.path.join(output_dir,"bdt-trainingdata-" + version + "-" + args.criterion)) 
+
+
 
 print('distance score: ', bdt.score(X, y))
 

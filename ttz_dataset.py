@@ -39,6 +39,7 @@ if args.small:
 
 
 output_dir = os.path.join(tmp_directory, args.version)
+
 if not os.path.exists(output_dir):
     os.makedirs( output_dir )
 
