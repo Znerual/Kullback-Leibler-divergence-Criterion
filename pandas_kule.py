@@ -100,6 +100,7 @@ if args.save:
     joblib.dump(bdt,  os.path.join(output_dir,"bdt-trainingdata-" + version + "-" + args.criterion)) 
 
 
+
 print('distance score: ', bdt.score(X, y))
 
 #get the output directory
@@ -191,7 +192,6 @@ plt.title('Decision Scores')
 
 plt.tight_layout()
 plt.subplots_adjust(wspace=0.35)
-
 
 
 #Draw the same plots with Theta Star
