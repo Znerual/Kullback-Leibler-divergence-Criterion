@@ -25,7 +25,7 @@ argParser.add_argument('--log_plot', action='store_true',help='Use a logarithmic
 args = argParser.parse_args()
 
 #Set the version of the script
-version = 'v5'
+version = 'v4-v5'
 
 #Logger
 import RootTools.core.logger as Logger
@@ -157,13 +157,14 @@ score  = bdt.decision_function(X)
  #       max(np.amax(score[:len(score)/2]*w0),np.amax(score[len(score)/2:]*w1   )))
 plot_range = (score.min(), score.max())
 plt.subplot(222)
-for i, n, c in zip(range(2), class_names[:2], plot_colors[:2]):
+#for i, n, c in zip(range(1), class_names[:1], plot_colors[:1]):
     #plt.hist(twoclass_output[y[np.where(w> w_min)] == i],
-    plt.hist(score,
+plt.hist(score * w,
              bins=10,
              range=plot_range,
              facecolor=c,
-             label='Class %s' % n,
+             #label='Class %s' % n,
+             label='Score',
              alpha=.5,
              edgecolor='k')
 x1, x2, y1, y2 = plt.axis()
