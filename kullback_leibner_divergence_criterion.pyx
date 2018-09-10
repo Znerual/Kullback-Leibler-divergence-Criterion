@@ -18,6 +18,7 @@ from libc.math cimport abs
 
 
 
+cdef bint DEBUG = False
 choice = 'kule'
 cdef class KullbackLeibnerCriterion(ClassificationCriterion):
     cdef double node_impurity(self) nogil:
@@ -41,25 +42,26 @@ cdef class KullbackLeibnerCriterion(ClassificationCriterion):
         
         for k in range(self.n_outputs):
             # Gini
-            sq_count = 0.0
+            if DEBUG:
+                sq_count = 0.0
 
-            for c in range(n_classes[k]):
-                count_k = sum_total[c]
-                sq_count += count_k * count_k
+                for c in range(n_classes[k]):
+                    count_k = sum_total[c]
+                    sq_count += count_k * count_k
 
-            gini += 1.0 - sq_count / (self.weighted_n_node_samples *
+                gini += 1.0 - sq_count / (self.weighted_n_node_samples *
                                       self.weighted_n_node_samples)
 
-            # Entropy
-            for c in range(n_classes[k]):
-                count_k = sum_total[c]
-                if count_k > 0.0:
-                    count_k /= self.weighted_n_node_samples
-                    entropy -= count_k * log(count_k)
+                # Entropy
+                for c in range(n_classes[k]):
+                    count_k = sum_total[c]
+                    if count_k > 0.0:
+                        count_k /= self.weighted_n_node_samples
+                        entropy -= count_k * log(count_k)
 
             # kule
             rho   = sum_total[1]/self.weighted_n_node_samples
-            rho_0 = sum_total[0]/self.weighted_n_node_samples # for debugging
+            if DEBUG: rho_0 = sum_total[0]/self.weighted_n_node_samples # for debugging
             if rho==1:
                 kule  = -INFINITY
             elif rho>0:
@@ -68,19 +70,20 @@ cdef class KullbackLeibnerCriterion(ClassificationCriterion):
                 rho=0
 
             # Hellinger
-            for c in range(n_classes[k]):
-                hellinger += 1.0
+            if DEBUG:
+                for c in range(n_classes[k]):
+                    hellinger += 1.0
 
             # This sum is gloablly relevant! It moves the array Pointer to the next entry
             sum_total += self.sum_stride
 
 
         with gil:
-
-            print "node_impurity: gini %6.4f entropy %6.4f kule %6.4f hellinger %6.4f" %( gini, entropy, kule, hellinger )
-            print "  sum_total[0] %6.4f sum_total[1] %6.4f" %( sum_total[0], sum_total[1] )
-            print "  weighted_n_node_samples %6.4f" %( self.weighted_n_node_samples )
-            print "  rho %6.4f rho_0 %6.4f" %( rho, rho_0 )
+            if DEBUG:
+                print "node_impurity: gini %6.4f entropy %6.4f kule %6.4f hellinger %6.4f" %( gini, entropy, kule, hellinger )
+                print "  sum_total[0] %6.4f sum_total[1] %6.4f" %( sum_total[0], sum_total[1] )
+                print "  weighted_n_node_samples %6.4f" %( self.weighted_n_node_samples )
+                print "  rho %6.4f rho_0 %6.4f" %( rho, rho_0 )
             
             if choice == 'gini':
                 return gini / self.n_outputs
@@ -123,33 +126,34 @@ cdef class KullbackLeibnerCriterion(ClassificationCriterion):
 
         for k in range(self.n_outputs):
             # Gini
-            sq_count_left = 0.0
-            sq_count_right = 0.0
+            if DEBUG:
+                sq_count_left = 0.0
+                sq_count_right = 0.0
 
-            for c in range(n_classes[k]):
-                count_k = sum_left[c]
-                sq_count_left += count_k * count_k
+                for c in range(n_classes[k]):
+                    count_k = sum_left[c]
+                    sq_count_left += count_k * count_k
 
-                count_k = sum_right[c]
-                sq_count_right += count_k * count_k
+                    count_k = sum_right[c]
+                    sq_count_right += count_k * count_k
 
-            gini_left += 1.0 - sq_count_left / (self.weighted_n_left *
+                gini_left += 1.0 - sq_count_left / (self.weighted_n_left *
                                                 self.weighted_n_left)
 
-            gini_right += 1.0 - sq_count_right / (self.weighted_n_right *
+                gini_right += 1.0 - sq_count_right / (self.weighted_n_right *
                                                   self.weighted_n_right)
 
-            # Entropy
-            for c in range(n_classes[k]):
-                count_k = sum_left[c]
-                if count_k > 0.0:
-                    count_k /= self.weighted_n_left
-                    entropy_left -= count_k * log(count_k)
+                # Entropy
+                for c in range(n_classes[k]):
+                    count_k = sum_left[c]
+                    if count_k > 0.0:
+                        count_k /= self.weighted_n_left
+                        entropy_left -= count_k * log(count_k)
 
-                count_k = sum_right[c]
-                if count_k > 0.0:
-                    count_k /= self.weighted_n_right
-                    entropy_right -= count_k * log(count_k)
+                    count_k = sum_right[c]
+                    if count_k > 0.0:
+                        count_k /= self.weighted_n_right
+                        entropy_right -= count_k * log(count_k)
 
             # kule
             rho_left = sum_left[1]/self.weighted_n_left
@@ -167,43 +171,44 @@ cdef class KullbackLeibnerCriterion(ClassificationCriterion):
                 kule_right = 0.5*rho_right - 0.25*rho_right*log(rho_right/(1-rho_right))
             else:
                 kule_right = 0.
+            
+            if DEBUG:
+                # for debugging: compute the mother impurity
+                rho  = (sum_left[1] + sum_right[1])/(self.weighted_n_left + self.weighted_n_right)
+                if rho == 1:
+                    kule = - INFINITY
+                elif rho > 0:
+                    kule = 0.5*rho - 0.25*rho*log(rho/(1-rho))
+                else:
+                    kule = 0.
 
-            # for debugging: compute the mother impurity
-            rho  = (sum_left[1] + sum_right[1])/(self.weighted_n_left + self.weighted_n_right)
-            if rho == 1:
-                kule = - INFINITY
-            elif rho > 0:
-                kule = 0.5*rho - 0.25*rho*log(rho/(1-rho))
-            else:
-                kule = 0.
+                # Hellinger
+                # stop splitting in case reached pure node with 0 samples of second class
+                if sum_left[1] + sum_right[1] == 0:
+                    impurity_left[0] = -INFINITY
+                    impurity_right[0] = -INFINITY
+                else:
 
-            # Hellinger
-            # stop splitting in case reached pure node with 0 samples of second class
-            if sum_left[1] + sum_right[1] == 0:
-                impurity_left[0] = -INFINITY
-                impurity_right[0] = -INFINITY
-            else:
+                    if(sum_left[0] + sum_right[0] > 0):
+                        count_k1 = sqrt(sum_left[0] / (sum_left[0] + sum_right[0]))
+                    if(sum_left[1] + sum_right[1] > 0):
+                        count_k2 = sqrt(sum_left[1] / (sum_left[1] + sum_right[1]))
 
-                if(sum_left[0] + sum_right[0] > 0):
-                    count_k1 = sqrt(sum_left[0] / (sum_left[0] + sum_right[0]))
-                if(sum_left[1] + sum_right[1] > 0):
-                    count_k2 = sqrt(sum_left[1] / (sum_left[1] + sum_right[1]))
+                    hellinger_left += pow((count_k1  - count_k2),2)
 
-                hellinger_left += pow((count_k1  - count_k2),2)
+                    if(sum_left[0] + sum_right[0] > 0):
+                        count_k1 = sqrt(sum_right[0] / (sum_left[0] + sum_right[0]))
+                    if(sum_left[1] + sum_right[1] > 0):
+                        count_k2 = sqrt(sum_right[1] / (sum_left[1] + sum_right[1]))
 
-                if(sum_left[0] + sum_right[0] > 0):
-                    count_k1 = sqrt(sum_right[0] / (sum_left[0] + sum_right[0]))
-                if(sum_left[1] + sum_right[1] > 0):
-                    count_k2 = sqrt(sum_right[1] / (sum_left[1] + sum_right[1]))
-
-                hellinger_right += pow((count_k1  - count_k2),2)
+                    hellinger_right += pow((count_k1  - count_k2),2)
 
             # Careful! This is a global sum! Can only do once and only at the end of this loop.
             sum_left += self.sum_stride
             sum_right += self.sum_stride
 
         with gil:
-            DeltaKule =  - self.weighted_n_left*kule_left - self.weighted_n_right*kule_right + (self.weighted_n_left+self.weighted_n_right)*kule
+            #DeltaKule =  - self.weighted_n_left*kule_left - self.weighted_n_right*kule_right + (self.weighted_n_left+self.weighted_n_right)*kule
             #print "children_impurity: kule_left %6.4f kule_right %6.4f kule_tot %6.4f DeltaKule %6.4f"%( kule_left, kule_right, kule, DeltaKule)
             if choice == 'gini':
                 impurity_left[0] = gini_left / self.n_outputs

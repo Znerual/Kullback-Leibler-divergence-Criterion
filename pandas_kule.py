@@ -26,6 +26,10 @@ argParser.add_argument('--save', action='store_true', help='Write the trained BD
 argParser.add_argument('--criterion', action='store', default='kule', nargs='?', choices=['gini', 'kule', 'entropy'] , help="Select the Criterion to be used")
 argParser.add_argument('--export', action='store_true', help="Export the trainded tree as graphviz dot")
 argParser.add_argument('--no_plot', action='store_true', help="Don't generate a plot")
+argParser.add_argument('--max_depth', action='store', default=2, type=int,nargs='?',  help="The max depth argument, which is given to the DecisionTreeClassifier")
+argParser.add_argument('--n_estimators', action='store', default=200, type=int,nargs='?',  help="The n_estimators argument, which is given to the AdaBoostClassifier")
+argParser.add_argument('--boost_algorithm', action='store', default='SAMME', nargs='?', choices=['SAMME', 'SAMME.R'], help="Choose a boosting algorithm for the AdaBoostClassifier")
+
 args = argParser.parse_args()
 
 #Set the version of the script
@@ -54,17 +58,17 @@ logger.debug('Import data from %s', input_directory)
 
 #Create the tree
 if args.criterion == 'kule':
-    dt = DecisionTreeClassifier(max_depth=2, criterion=kldc)
+    dt = DecisionTreeClassifier(max_depth= args.max_depth, criterion=kldc)
 elif args.criterion == 'gini':
-    dt = DecisionTreeClassifier(max_depth=2, criterion='gini')
+    dt = DecisionTreeClassifier(max_depth= args.max_depth, criterion='gini')
 elif args.criterion == 'entropy':    
-    dt = DecisionTreeClassifier(max_depth=2, criterion='entropy')
+    dt = DecisionTreeClassifier(max_depth= args.max_depth, criterion='entropy')
 else:
     assert False, "You choose the wrong Classifier"
 # Create and fit an AdaBoosted decision tree
 bdt = AdaBoostClassifier(dt,
-                         algorithm="SAMME",
-                     n_estimators=200)
+                         algorithm= args.boost_algorithm,
+                     n_estimators= args.n_estimators)
 
 #read data from file
 df = pd.read_hdf(os.path.join(input_directory, args.data))
@@ -112,9 +116,9 @@ if args.export:
 
 print('distance score: ', bdt.score(X, y))
 
-
+reached_score = bdt.score(X,y,w)
 #calculate the score
-logger.info('Reached a score of %f',  bdt.score(X,y,w))
+logger.info('Reached a score of %f',  reached_score)
 
 if args.no_plot:
     raise SystemExit
@@ -129,7 +133,7 @@ plot_colors = "brk"
 plot_step = 0.5
 class_names = ["SM","BSM","Event"]
 
-plt.figure(figsize=(12, 12))
+plt.figure(figsize=(12, 13))
 
 #Plot the decision boundaries
 plt.subplot(224)
@@ -146,9 +150,8 @@ Z = Z.reshape(xx.shape)
 plt.pcolormesh(xx,yy,Z, cmap=plt.cm.coolwarm)
 #cs = plt.contour(xx, yy, Z, cmap=plt.cm.coolwarm)
 #cs = plt.contour(xx, yy, Z, linewidths=0.75, colors='k') #draw edges
-cs = plt.contourf(xx, yy, Z, linewidths=0.75)
+cs = plt.contourf(xx, yy, Z, cmap=plt.cm.coolwarm)
 plt.axis("tight")
-
 #Plot the training points
 for i, n, c in zip(range(2), class_names[:2], plot_colors[:2]):
     #idx = np.intersect1d(np.where(y == i),np.where(w > w_min))
@@ -218,7 +221,7 @@ for i, n, c in zip(range(2), class_names[:2], plot_colors[:2]):
     plt.axis((x1, x2, y1, y2 * 1.2))
     plt.legend(loc='upper right')
     plt.ylabel('Samples')
-    plt.xlabel('Score')
+    plt.xlabel('Score \n ' + str(reached_score))
     plt.title('Decision Scores')
 
 plt.tight_layout()
