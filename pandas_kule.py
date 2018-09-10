@@ -100,15 +100,9 @@ if args.save:
     joblib.dump(bdt,  os.path.join(output_dir,"bdt-trainingdata-" + version)) 
 
 
-<<<<<<< HEAD
-<<<<<<< HEAD
-=======
 
->>>>>>> bdc4e316a940870922a9f876ae773b7a479cfcfe
 print('distance score: ', bdt.score(X, y))
 
-=======
->>>>>>> 2313d7b36f256da9c3d22e19c003f3d08b60daf6
 #get the output directory
 output_directory = os.path.join(plot_directory,'Kullback-Leibner-Plots', argParser.prog.split('.')[0])
 if not os.path.exists(output_directory):
@@ -181,10 +175,11 @@ plot_range = (score.min(), score.max())
 plt.subplot(222)
 #for i, n, c in zip(range(1), class_names[:1], plot_colors[:1]):
     #plt.hist(twoclass_output[y[np.where(w> w_min)] == i],
-plt.hist(score * w,
+plt.hist(score,
              bins=10,
              range=plot_range,
              facecolor=c,
+             weights=w,
              #label='Class %s' % n,
              label='Score',
              alpha=.5,
