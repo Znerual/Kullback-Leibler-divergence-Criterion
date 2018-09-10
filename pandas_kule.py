@@ -29,7 +29,7 @@ argParser.add_argument('--no_plot', action='store_true', help="Don't generate a 
 args = argParser.parse_args()
 
 #Set the version of the script
-version = 'v7'
+vversion = 'v7'
 
 #set criterion, you can choose from (gini, kule, entropy, hellinger)
 
@@ -41,13 +41,13 @@ logger = Logger.get_logger(args.logLevel, logFile = None)
 from kullback_leibner_divergence_criterion import KullbackLeibnerCriterion
 kldc = KullbackLeibnerCriterion(1, np.array([2], dtype='int64'))
 
-
+version = vversion
 if args.small:
     args.data_version += '_small'
     version += '_small'
 if args.log_plot:
     version += '_log'
-version += args.criterion
+version += '_' + args.criterion
 #find directory
 input_directory = os.path.join(tmp_directory, args.data_version)
 logger.debug('Import data from %s', input_directory)
@@ -120,7 +120,7 @@ if args.no_plot:
     raise SystemExit
 
 #get the output directory
-output_directory = os.path.join(plot_directory,'Kullback-Leibner-Plots', argParser.prog.split('.')[0])
+output_directory = os.path.join(plot_directory,'Kullback-Leibner-Plots',  argParser.prog.split('.')[0], vversion)
 if not os.path.exists(output_directory):
     os.makedirs(output_directory)
 logger.info('Save to %s directory', output_directory)
@@ -138,9 +138,12 @@ y_min, y_max = X[:, 1].min() - 1, X[:, 1].max() + 1
 xx, yy = np.meshgrid(np.arange(x_min, x_max, plot_step),
                      np.arange(y_min, y_max, plot_step))
 
-Z = bdt.predict(np.c_[xx.ravel(), yy.ravel()])
+#Z = bdt.predict(np.c_[xx.ravel(), yy.ravel()])
+Z = bdt.decision_function(np.c_[xx.ravel(), yy.ravel()])
 Z = Z.reshape(xx.shape)
-cs = plt.contourf(xx, yy, Z, cmap=plt.cm.Paired)
+plt.pcolormesh(xx,yy,Z, cmap=plt.cm.coolwarm)
+#cs = plt.contour(xx, yy, Z, cmap=plt.cm.coolwarm)
+cs = plt.contour(xx, yy, Z, linewidths=0.75, colors='k')
 plt.axis("tight")
 
 #Plot the training points
@@ -148,7 +151,7 @@ for i, n, c in zip(range(2), class_names[:2], plot_colors[:2]):
     #idx = np.intersect1d(np.where(y == i),np.where(w > w_min))
     idx = np.where(y == i)
     plt.scatter(X[idx, 0], X[idx, 1],
-                c=c, cmap=plt.cm.Paired,
+                c=c, cmap=plt.cm.coolwarm,
                 s=20, edgecolor='k',
                 label="Class %s" % n,
                 marker=".")
@@ -165,40 +168,31 @@ plt.title('Decision Boundary')
 #Plot the Histogramm for the number of Events over genZ_p..
 plot_weights = [w0,w1, weight_mean_array]
 
-#plt.subplot(221)
-#plot_range = (df['genZ_pt/F'].min(), df['genZ_pt/F'].max())
-#for i, n, c in zip(range(3), class_names, plot_colors):
-#    plt.hist(df['genZ_pt/F'],
-#        bins=50, 
-#        range=plot_range, 
-#        weights=plot_weights[i],
-#        facecolor=c,
-#        label='%s Data' % n,
-#        alpha=.5,
-#        edgecolor='k',
-#        log=args.log_plot)
-#plt.ylabel('Number of Events')
-#plt.xlabel('p_T(Z) (GeV)')
-#plt.title('Weighted p_T(Z)')
-#plt.legend(loc='upper right')
-
-#Plot the Feature Importance..
-
 plt.subplot(221)
-plot_range = (bdt.feature_importances_.min(), bdt.feature_importances_.max())
-plt.hist(bdt.feature_importances_,
+plot_range = (df['genZ_pt/F'].min(), df['genZ_pt/F'].max())
+for i, n, c in zip(range(3), class_names, plot_colors):
+    plt.hist(df['genZ_pt/F'],
         bins=50, 
         range=plot_range, 
-      #  weights=plot_weights[i],
-        facecolor='k',
-        label='Feature Importance',
+        weights=plot_weights[i],
+        facecolor=c,
+        label='%s Data' % n,
         alpha=.5,
         edgecolor='k',
         log=args.log_plot)
-#plt.ylabel('Number of Events')
-#plt.xlabel('p_T(Z) (GeV)')
-#plt.title('Weighted p_T(Z)')
+plt.ylabel('Number of Events')
+plt.xlabel('p_T(Z) (GeV)')
+plt.title('Weighted p_T(Z)')
 plt.legend(loc='upper right')
+
+#prints the predicted value
+#print bdt.decision_function([[400.0,0.0]])
+
+#prints the predicted class
+#print bdt.predict([[400.0,0.0]])
+
+#Plot the Feature Importance..
+
 #Plot the decision diagram
 score  = bdt.decision_function(X)
 #now, we weight our score
@@ -206,23 +200,23 @@ score  = bdt.decision_function(X)
  #       max(np.amax(score[:len(score)/2]*w0),np.amax(score[len(score)/2:]*w1   )))
 plot_range = (score.min(), score.max())
 plt.subplot(222)
-#for i, n, c in zip(range(1), class_names[:1], plot_colors[:1]):
+for i, n, c in zip(range(2), class_names[:2], plot_colors[:2]):
     #plt.hist(twoclass_output[y[np.where(w> w_min)] == i],
-plt.hist(score,
+    plt.hist(score[i*len(X)/2:(i+1)*len(X)/2] ,
              bins=10,
              range=plot_range,
-             facecolor='b',
-             weights=w,
-             #label='Class %s' % n,
-             label='Score',
+             facecolor=c,
+             weights=plot_weights[i],
+             label='Class %s' % n,
+            # label='Score',
              alpha=.5,
              edgecolor='k')
-x1, x2, y1, y2 = plt.axis()
-plt.axis((x1, x2, y1, y2 * 1.2))
-plt.legend(loc='upper right')
-plt.ylabel('Samples')
-plt.xlabel('Score')
-plt.title('Decision Scores')
+    x1, x2, y1, y2 = plt.axis()
+    plt.axis((x1, x2, y1, y2 * 1.2))
+    plt.legend(loc='upper right')
+    plt.ylabel('Samples')
+    plt.xlabel('Score')
+    plt.title('Decision Scores')
 
 plt.tight_layout()
 plt.subplots_adjust(wspace=0.35)
@@ -249,4 +243,4 @@ plt.legend(loc='upper right')
 
 
 #save the plot
-plt.savefig(os.path.join( output_directory,'pandas-ttz-' + version + '.png'))
+plt.savefig(os.path.join( output_directory,  'pandas-ttz-' + version + '.png'))
