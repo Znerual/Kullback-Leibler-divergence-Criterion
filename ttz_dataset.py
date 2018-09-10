@@ -23,9 +23,11 @@ import argparse
 argParser = argparse.ArgumentParser(description = "Argument Parser")
 argParser.add_argument('--logLevel', action='store', default='INFO', nargs='?', choices=['CRITICAL', 'ERROR', 'WARNING', 'INFO', 'DEBUG', 'TRACE', 'NOTSET'], help="Log level for logging")
 argParser.add_argument('--small', action='store_true', help='Run only a subset')
-argParser.add_argument('--version', action='store', default='v1')
 argParser.add_argument('--chunksize', action='store',  default='100000', type=int)
 args = argParser.parse_args()
+
+#version
+version = 'v2'
 
 #Logger
 import RootTools.core.logger as Logger
@@ -34,11 +36,11 @@ logger = Logger.get_logger(args.logLevel, logFile = None)
 
 #Output directory and makeing the dataset small
 if args.small:
-    args.version += '_small'
+    version += '_small'
     sample.reduceFiles( to = 10 )
 
 
-output_dir = os.path.join(tmp_directory, args.version)
+output_dir = os.path.join(tmp_directory, version)
 
 if not os.path.exists(output_dir):
     os.makedirs( output_dir )
@@ -90,10 +92,10 @@ reader = sample.treeReader( variables = read_variables )
 reader.start()
 
     #y = 0, sm
-ptz_sm = ROOT.TH1F('ptZ_sm'+args.version, 'ptZ_sm'+args.version , 50,0,1000)
-ptz_bsm = ROOT.TH1F('ptZ_bsm'+args.version , 'ptZ_bsm'+args.version, 50,0,1000)
-cosTheta_sm = ROOT.TH1F('cosThetaStar_sm'+args.version, 'cosThetaStar_sm'+args.version, 50, -1,1 )
-cosTheta_bsm = ROOT.TH1F('cosThetaStar_bsm'+args.version, 'cosThetaStar_bsm'+args.version, 50, -1,1 )
+ptz_sm = ROOT.TH1F('ptZ_sm'+version, 'ptZ_sm'+version , 50,0,1000)
+ptz_bsm = ROOT.TH1F('ptZ_bsm'+version , 'ptZ_bsm'+version, 50,0,1000)
+cosTheta_sm = ROOT.TH1F('cosThetaStar_sm'+version, 'cosThetaStar_sm'+version, 50, -1,1 )
+cosTheta_bsm = ROOT.TH1F('cosThetaStar_bsm'+version, 'cosThetaStar_bsm'+version, 50, -1,1 )
 while reader.run():
     if args.small:
         prefac = lumi*reader.event.ref_lumiweight1fb/sample.reduce_files_factor
@@ -154,29 +156,31 @@ cosTheta_sm.style = styles.lineStyle( ROOT.kBlue)
 cosTheta_bsm.style = styles.lineStyle( ROOT.kRed)
 
 #Outputdirectory
-output_directory = os.path.join(plot_directory, 'Kullback-Leibner-Plots', argParser.prog.split('.')[0])
+output_directory = os.path.join(plot_directory, 'Kullback-Leibner-Plots', argParser.prog.split('.')[0],version)
 
 #draw the plots
-plot = Plot.fromHisto("ptz"+args.version,
+plot = Plot.fromHisto("ptz"+version,
                 [[ptz_sm],[ptz_bsm]],
                 #texX = "p_{T}(Z) (GeV)"
-                texX = "p_{T}(Z) (GeV)"
+                texX = "p_{T}(Z) (GeV)",
             )
 
 plotting.draw( plot,
     plot_directory = output_directory, 
     logX = False, logY = True, sorting = False, 
-    copyIndexPHP = False
+    copyIndexPHP = False,
+    scaling = {1:0},
 )
 
-plot = Plot.fromHisto("CosTheta"+args.version,
+plot = Plot.fromHisto("CosTheta"+version,
                 [[cosTheta_sm],[cosTheta_bsm]],
                 #texX = "p_{T}(Z) (GeV)"
-                texX = "cos(\Theta) "
+                texX = "cos(\Theta)",
             )
 
 plotting.draw( plot,
     plot_directory = output_directory, 
     logX = False, logY = False, sorting = False, 
-    copyIndexPHP = False
+    copyIndexPHP = False,
+    scaling = {1:0},
 )

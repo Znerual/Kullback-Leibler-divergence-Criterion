@@ -20,7 +20,7 @@ argParser = argparse.ArgumentParser(description = "Argument Parser")
 argParser.add_argument('--logLevel', action='store', default='INFO', nargs='?', choices=['CRITICAL', 'ERROR', 'WARNING', 'INFO', 'DEBUG', 'TRACE', 'NOTSET'], help="Log level for logging")
 argParser.add_argument('--small', action='store_true', help='Use the small dataset')
 argParser.add_argument('--data', action='store',default='data.h5')
-argParser.add_argument('--data_version', action='store',default='v2',help='Version of the data to be used')
+argParser.add_argument('--data_version', action='store',default='v1',help='Version of the data to be used')
 argParser.add_argument('--log_plot', action='store_true',help='Use a logarithmic plot')
 argParser.add_argument('--save', action='store_true', help='Write the trained BDT to a file')
 argParser.add_argument('--criterion', action='store', default='kule', nargs='?', choices=['gini', 'kule', 'entropy'] , help="Select the Criterion to be used")
@@ -97,7 +97,7 @@ if args.save:
     if not os.path.exists(output_dir):
         os.makedirs( output_dir)
     logger.info("Save the trained plot to %s, it uses the %s criterion", output_dir, args.criterion)
-    joblib.dump(bdt,  os.path.join(output_dir,"bdt-trainingdata-" + version)) 
+    joblib.dump(bdt,  os.path.join(output_dir,"bdt-trainingdata-" + version + "-" + args.criterion)) 
 
 
 <<<<<<< HEAD
@@ -217,4 +217,4 @@ plt.legend(loc='upper right')
 
 
 #save the plot
-plt.savefig(os.path.join( output_directory,'pandas-ttz-' + version + '.png'))
+plt.savefig(os.path.join( output_directory,'pandas-ttz' + version + '.png'))
