@@ -101,6 +101,10 @@ if args.save:
 
 
 <<<<<<< HEAD
+<<<<<<< HEAD
+=======
+
+>>>>>>> bdc4e316a940870922a9f876ae773b7a479cfcfe
 print('distance score: ', bdt.score(X, y))
 
 =======
