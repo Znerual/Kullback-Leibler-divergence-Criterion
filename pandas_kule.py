@@ -139,11 +139,14 @@ xx, yy = np.meshgrid(np.arange(x_min, x_max, plot_step),
                      np.arange(y_min, y_max, plot_step))
 
 #Z = bdt.predict(np.c_[xx.ravel(), yy.ravel()])
+
+#fill the plot with gradient color
 Z = bdt.decision_function(np.c_[xx.ravel(), yy.ravel()])
 Z = Z.reshape(xx.shape)
 plt.pcolormesh(xx,yy,Z, cmap=plt.cm.coolwarm)
 #cs = plt.contour(xx, yy, Z, cmap=plt.cm.coolwarm)
-cs = plt.contour(xx, yy, Z, linewidths=0.75, colors='k')
+#cs = plt.contour(xx, yy, Z, linewidths=0.75, colors='k') #draw edges
+cs = plt.contourf(xx, yy, Z, linewidths=0.75)
 plt.axis("tight")
 
 #Plot the training points
