@@ -8,7 +8,7 @@ import pandas as pd
 
 # sklearn
 from sklearn.ensemble import AdaBoostClassifier, RandomForestClassifier
-from sklearn.tree import DecisionTreeClassifier
+from sklearn.tree import DecisionTreeClassifier, export_graphviz
 from sklearn.datasets import make_gaussian_quantiles, make_classification, make_blobs
 from sklearn.externals import joblib
 # TTXPheno
@@ -24,10 +24,12 @@ argParser.add_argument('--data_version', action='store',default='v2',help='Versi
 argParser.add_argument('--log_plot', action='store_true',help='Use a logarithmic plot')
 argParser.add_argument('--save', action='store_true', help='Write the trained BDT to a file')
 argParser.add_argument('--criterion', action='store', default='kule', nargs='?', choices=['gini', 'kule', 'entropy'] , help="Select the Criterion to be used")
+argParser.add_argument('--export', action='store_true', help="Export the trainded tree as graphviz dot")
+argParser.add_argument('--no_plot', action='store_true', help="Don't generate a plot")
 args = argParser.parse_args()
 
 #Set the version of the script
-version = 'v6'
+version = 'v7'
 
 #set criterion, you can choose from (gini, kule, entropy, hellinger)
 
@@ -90,18 +92,32 @@ logger.info('Mean of sm_weights: %f, mean of bsm_weights: %f',sm_weight_mean, bs
 #train
 bdt.fit(X, y, w)
 
+
+
+#get the directory
+output_dir = os.path.join(tmp_directory, args.data_version)
+if not os.path.exists(output_dir):
+    os.makedirs( output_dir)
+
 #save to file
 if args.save:
-    #get the directory
-    output_dir = os.path.join(tmp_directory, args.data_version)
-    if not os.path.exists(output_dir):
-        os.makedirs( output_dir)
     logger.info("Save the trained plot to %s, it uses the %s criterion", output_dir, args.criterion)
     joblib.dump(bdt,  os.path.join(output_dir,"bdt-trainingdata-" + version)) 
+    logger.info("Dumped the tree to %s",  os.path.join(output_dir,"bdt-trainingdata-" + version))
 
-
+#export the tree
+if args.export:
+    export_graphviz(bdt, out_file= os.path.join(output_dir, version + "-tree.dot"))
+    logger.info("Exported the tree as .dot to %s", os.path.join(output_dir, version + "-tree.dot")) 
 
 print('distance score: ', bdt.score(X, y))
+
+
+#calculate the score
+logger.info('Reached a score of %f',  bdt.score(X,y,w))
+
+if args.no_plot:
+    raise SystemExit
 
 #get the output directory
 output_directory = os.path.join(plot_directory,'Kullback-Leibner-Plots', argParser.prog.split('.')[0])
@@ -149,23 +165,40 @@ plt.title('Decision Boundary')
 #Plot the Histogramm for the number of Events over genZ_p..
 plot_weights = [w0,w1, weight_mean_array]
 
+#plt.subplot(221)
+#plot_range = (df['genZ_pt/F'].min(), df['genZ_pt/F'].max())
+#for i, n, c in zip(range(3), class_names, plot_colors):
+#    plt.hist(df['genZ_pt/F'],
+#        bins=50, 
+#        range=plot_range, 
+#        weights=plot_weights[i],
+#        facecolor=c,
+#        label='%s Data' % n,
+#        alpha=.5,
+#        edgecolor='k',
+#        log=args.log_plot)
+#plt.ylabel('Number of Events')
+#plt.xlabel('p_T(Z) (GeV)')
+#plt.title('Weighted p_T(Z)')
+#plt.legend(loc='upper right')
+
+#Plot the Feature Importance..
+
 plt.subplot(221)
-plot_range = (df['genZ_pt/F'].min(), df['genZ_pt/F'].max())
-for i, n, c in zip(range(3), class_names, plot_colors):
-    plt.hist(df['genZ_pt/F'],
+plot_range = (bdt.feature_importances_.min(), bdt.feature_importances_.max())
+plt.hist(bdt.feature_importances_,
         bins=50, 
         range=plot_range, 
-        weights=plot_weights[i],
-        facecolor=c,
-        label='%s Data' % n,
+      #  weights=plot_weights[i],
+        facecolor='k',
+        label='Feature Importance',
         alpha=.5,
         edgecolor='k',
         log=args.log_plot)
-plt.ylabel('Number of Events')
-plt.xlabel('p_T(Z) (GeV)')
-plt.title('Weighted p_T(Z)')
+#plt.ylabel('Number of Events')
+#plt.xlabel('p_T(Z) (GeV)')
+#plt.title('Weighted p_T(Z)')
 plt.legend(loc='upper right')
-
 #Plot the decision diagram
 score  = bdt.decision_function(X)
 #now, we weight our score
@@ -178,7 +211,7 @@ plt.subplot(222)
 plt.hist(score,
              bins=10,
              range=plot_range,
-             facecolor=c,
+             facecolor='b',
              weights=w,
              #label='Class %s' % n,
              label='Score',
