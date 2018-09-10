@@ -53,6 +53,7 @@ if args.small:
 if args.log_plot:
     version += '_log'
 version += '_' + args.criterion
+version += '_' + args.max_depth + '_' + args.n_estimators + '_' + args.boost_algorithm
 
 #find directory
 input_directory = os.path.join(tmp_directory, args.data_version)
