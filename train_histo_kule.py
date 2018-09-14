@@ -14,8 +14,12 @@ from sklearn.tree import DecisionTreeClassifier, export_graphviz
 from sklearn.datasets import make_gaussian_quantiles, make_classification, make_blobs
 from sklearn.externals import joblib
 from sklearn.model_selection import train_test_split
+
 # TTXPheno
 from TTXPheno.Tools.user import plot_directory, tmp_directory
+
+#Kullback Leibner Divergenz
+from kullback_leibner import KullbackLeibner
 
 #start the timer
 start = time.time()
@@ -154,10 +158,10 @@ if not os.path.exists(output_directory):
 logger.info('Save to %s directory', output_directory)
 
 #setup the historgramms
-h_dis_train_SM = ROOT.TH1F("dis_train_sm", "Discriminator for SM trainingsdata", 10, -1, 1)
-h_dis_train_BSM = ROOT.TH1F("dis_train_bsm", "Discriminator for BSM trainingsdata", 10, -1, 1)
-h_dis_test_SM = ROOT.TH1F("dis_test_sm", "Discriminator for SM testdata", 10, -1, 1)
-h_dis_test_BSM = ROOT.TH1F("dis_test_bsm", "Discriminator for BSM testdata", 10, -1, 1)
+h_dis_train_SM = ROOT.TH1F("dis_train_sm", "Discriminator", 25, -1, 1)
+h_dis_train_BSM = ROOT.TH1F("dis_train_bsm", "Discriminator", 25, -1, 1)
+h_dis_test_SM = ROOT.TH1F("dis_test_sm", "Discriminator", 25, -1, 1)
+h_dis_test_BSM = ROOT.TH1F("dis_test_bsm", "Discriminator", 25, -1, 1)
 
 #set the error calculationsmethod
 ROOT.TH1.SetDefaultSumw2()
@@ -168,38 +172,55 @@ h_dis_train_BSM.SetLineColor(ROOT.kRed+2)
 h_dis_test_SM.SetLineColor(ROOT.kBlue-5)
 h_dis_test_BSM.SetLineColor(ROOT.kRed-4)
 
+#set line width
+h_dis_train_SM.SetLineWidth(3)
+h_dis_train_BSM.SetLineWidth(3)
+h_dis_test_SM.SetLineWidth(3)
+h_dis_test_BSM.SetLineWidth(3)
+
 
 #set colors
-h_dis_train_SM.SetFillColor(ROOT.kBlue+2)
-h_dis_train_BSM.SetFillColor(ROOT.kRed+2)
-h_dis_test_SM.SetFillColor(ROOT.kBlue-5)
-h_dis_test_BSM.SetFillColor(ROOT.kRed-4)
+h_dis_train_SM.SetFillColor(ROOT.kBlue+3)
+h_dis_train_BSM.SetFillColor(ROOT.kRed+3)
+h_dis_test_SM.SetFillColor(ROOT.kBlue-8)
+h_dis_test_BSM.SetFillColor(ROOT.kRed-9)
 
 #set fill styles
-h_dis_train_SM.SetFillStyle(3001)
-h_dis_train_BSM.SetFillStyle(3001)
-h_dis_test_SM.SetFillStyle(3001)
-h_dis_test_BSM.SetFillStyle(3001)
+h_dis_train_SM.SetFillStyle(0)
+h_dis_train_BSM.SetFillStyle(0)
+h_dis_test_SM.SetFillStyle(0)
+h_dis_test_BSM.SetFillStyle(0)
 
+#hide statbox
+ROOT.gStyle.SetOptStat(0)
 
 logger.info('Zeit bis vor der Loop: ' + '{:5.3f}s'.format(time.time()-start))
+
+test_decision_function = bdt.decision_function(X_test)
+train_decision_function = bdt.decision_function(X_train)
 
 #loop over the feature vektor to fill the histogramms (test data)
 
 for i in xrange(len(X_test)):
     if y_test[i] == 0:
-        h_dis_test_SM.Fill(bdt.decision_function([X_test[i]]),w_test[i])
+        h_dis_test_SM.Fill(test_decision_function[i],w_test[i])
     else:
-        h_dis_test_BSM.Fill(bdt.decision_function([X_test[i]]),w_test[i])
+        h_dis_test_BSM.Fill(test_decision_function[i],w_test[i])
 
 #fill with trainings data
 for i in xrange(len(X_test)): 
     if y_test[i] == 0:
-        h_dis_train_SM.Fill(bdt.decision_function([X_train[i]]),w_train[i])
+        h_dis_train_SM.Fill(train_decision_function[i],w_train[i])
     else:
-        h_dis_train_BSM.Fill(bdt.decision_function([X_train[i]]),w_train[i])
+        h_dis_train_BSM.Fill(train_decision_function[i],w_train[i])
 
 logger.info('Zeit bis vor nach der Loop: ' + '{:5.3f}s'.format(time.time()-start))
+
+#normalize the histograms
+h_dis_train_SM.Scale(1/h_dis_train_SM.Integral())
+h_dis_train_BSM.Scale(1/h_dis_train_BSM.Integral())
+h_dis_test_SM.Scale(1/h_dis_test_SM.Integral())
+h_dis_test_BSM.Scale(1/h_dis_test_BSM.Integral())
 
 
 #Plot the diagramms
@@ -209,8 +230,26 @@ h_dis_train_BSM.Draw("h same e")
 h_dis_test_SM.Draw("h same e")
 h_dis_test_BSM.Draw("h same e")
 
+#add a legend
+leg = ROOT.TLegend(0.7, 0.9, 0.9, 0.7)
+leg.AddEntry(h_dis_train_SM,"SM Training")
+leg.AddEntry(h_dis_train_BSM,"BSM Training")
+leg.AddEntry(h_dis_test_SM,"SM Testing")
+leg.AddEntry(h_dis_test_BSM,"BSM Testing")
+leg.Draw()
+
+#label the axes
+h_dis_train_SM.GetXaxis().SetTitle("Discriminator")
+h_dis_train_SM.GetYaxis().SetTitle("Normalized number of events")
+
 #Save to file
 c.Print(os.path.join( output_directory, 'ttz-kule' + version + '.png'))
+
+
+#Berechne die Kule Div
+kl = KullbackLeibner(logger)
+kule, error = kl.kule_div(h_dis_test_SM, h_dis_test_BSM)
+logger.info('Kullback-Leibner Divergenz: %f and error: %f',kule,error)
 
 #stop the timer
 ende = time.time()
