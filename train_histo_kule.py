@@ -37,14 +37,17 @@ argParser.add_argument('--criterion', action='store', default='kule', nargs='?',
 argParser.add_argument('--export', action='store_true', help="Export the trainded tree as graphviz dot")
 argParser.add_argument('--no_plot', action='store_true', help="Don't generate a plot")
 argParser.add_argument('--max_depth', action='store', default=2, type=int,nargs='?',  help="The max depth argument, which is given to the DecisionTreeClassifier")
-argParser.add_argument('--n_estimators', action='store', default=200, type=int,nargs='?',  help="The n_estimators argument, which is given to the AdaBoostClassifier")
+argParser.add_argument('--n_est_start', action='store', default=100, type=int,nargs='?',  help="The n_estimators argument, which is given to the AdaBoostClassifier over an interval from n_est_start to n_est_end")
+argParser.add_argument('--n_est_end', action='store', default=2000, type=int,nargs='?',  help="The n_estimators argument, which is given to the AdaBoostClassifier")
+argParser.add_argument('--est_num', action='store', default=40, type=int,nargs='?',  help="The number of steps between the start and end of n_estimators")
 argParser.add_argument('--boost_algorithm', action='store', default='SAMME', nargs='?', choices=['SAMME', 'SAMME.R'], help="Choose a boosting algorithm for the AdaBoostClassifier")
 argParser.add_argument('--swap_hypothesis', action='store_true', help="Chance the Target Labels of SM and BSM Hypothesis")
+argParser.add_argument('--random_state', action='store', default=0, type=int,nargs='?',  help="The random state, which is given to the train_test_split method")
 
 args = argParser.parse_args()
 
 #Set the version of the script
-vversion = 'v9'
+vversion = 'v10'
 
 #set criterion, you can choose from (gini, kule, entropy, hellinger)
 
@@ -58,6 +61,7 @@ kldc = KullbackLeibnerCriterion(1, np.array([2], dtype='int64'))
 
 #setting up the file save name
 version = vversion
+version += '_' + args.criterion
 if args.small:
     args.data_version += '_small'
     version += '_small'
@@ -65,27 +69,12 @@ if args.log_plot:
     version += '_log'
 if args.swap_hypothesis:
     version += '_swap'
-version += '_' + args.criterion
-version += '_' + str(args.max_depth) + '_' + str( args.n_estimators) + '_' + str(args.boost_algorithm)
+version += '_maxDepth' + str(args.max_depth) + '_estStart' + str( args.n_est_start) + '_estEnd' + str(args.n_est_end) + '_EstNum' + str(args.est_num) + '_BoostAlg'  + str(args.boost_algorithm) + '_RandState' + str(args.random_state)
 
 #find directory
 input_directory = os.path.join(tmp_directory, args.data_version)
 logger.debug('Import data from %s', input_directory)
 
-#Create the tree
-if args.criterion == 'kule':
-    dt = DecisionTreeClassifier(max_depth= args.max_depth, criterion=kldc)
-elif args.criterion == 'gini':
-    dt = DecisionTreeClassifier(max_depth= args.max_depth, criterion='gini')
-elif args.criterion == 'entropy':    
-    dt = DecisionTreeClassifier(max_depth= args.max_depth, criterion='entropy')
-else:
-    assert False, "You choose the wrong Classifier"
-
-# Create and fit an AdaBoosted decision tree
-bdt = AdaBoostClassifier(dt,
-                         algorithm= args.boost_algorithm,
-                     n_estimators= args.n_estimators)
 
 #read data from file
 df = pd.read_hdf(os.path.join(input_directory, args.data))
@@ -114,17 +103,35 @@ weight_mean_array = np.full([len(w0)], weight_mean)
 logger.info('Mean of sm_weights: %f, mean of bsm_weights: %f',sm_weight_mean, bsm_weight_mean  )
 
 #split the data into validation and trainings set
-X_train, X_test, y_train, y_test, w_train, w_test = train_test_split(X,y,w,test_size= 0.5)
+X_train, X_test, y_train, y_test, w_train, w_test = train_test_split(X,y,w,test_size= 0.5, random_state=0)
 
+#Create the tree
+if args.criterion == 'kule':
+    dt = DecisionTreeClassifier(max_depth= args.max_depth, criterion=kldc)
+elif args.criterion == 'gini':
+    dt = DecisionTreeClassifier(max_depth= args.max_depth, criterion='gini')
+elif args.criterion == 'entropy':    
+    dt = DecisionTreeClassifier(max_depth= args.max_depth, criterion='entropy')
+else:
+    assert False, "You choose the wrong Classifier"
 
-#train
-bdt.fit(X_train, y_train, w_train)
+parameters = np.linspace(args.n_est_start, args.n_est_end, num=args.est_num, dtype=np.int32) 
+train_scores = []
+test_scores = []
 
-#calculate the score
-reached_trainings_score = bdt.score(X_train,y_train,w_train)
-reached_validation_score = bdt.score(X_test, y_test, w_test)
-logger.info('Reached a trainings score of %f, and a validation score of %f',  reached_trainings_score,reached_validation_score )
+for para in parameters:
+    # Create and fit an AdaBoosted decision tree
+    bdt = AdaBoostClassifier(dt, algorithm= args.boost_algorithm,n_estimators= para)
+    bdt.fit(X_train, y_train, w_train)
+    train_score = bdt.score(X_train, y_train, w_train)
+    test_score = bdt.score(X_test, y_test, w_test)
+    train_scores.append(train_score)
+    test_scores.append(test_score)
+    logger.info("Parameter: %i, Train-Score: %f, Test-Score: %f", para, train_score, test_score)
 
+i_para_optimal = np.argmax(test_scores)
+para_optim = parameters[i_para_optimal]
+logger.info("The optimal Parameter was: %i", para_optim)
 #stop the time to train the tree
 ende_training = time.time()
 logger.info('Time to train the tree ' +  '{:5.3f}s'.format(ende_training-start))
@@ -224,7 +231,7 @@ h_dis_test_BSM.Scale(1/h_dis_test_BSM.Integral())
 
 
 #Plot the diagramms
-c = ROOT.TCanvas("Discriminator", "", 1920, 1080)
+c = ROOT.TCanvas("Discriminator", "", 2880, 1620)
 h_dis_train_SM.Draw("h e")
 h_dis_train_BSM.Draw("h same e")
 h_dis_test_SM.Draw("h same e")
@@ -237,7 +244,7 @@ kule_train, error_train = kl.kule_div(h_dis_train_SM, h_dis_train_BSM)
 logger.info('Kullback-Leibner Divergenz:\nTraining: %f and error: %f \nTesting: %f and error: %f',kule_train,error_train, kule_test, error_test)
 
 #add a legend
-leg = ROOT.TLegend(0.7, 0.9, 0.9, 0.7)
+leg = ROOT.TLegend(0.65, 0.9, 0.9, 0.65)
 leg.AddEntry(h_dis_train_SM,"SM Training")
 leg.AddEntry(h_dis_train_BSM,"BSM Training")
 leg.AddEntry(h_dis_test_SM,"SM Testing")
