@@ -5,6 +5,8 @@ import matplotlib
 matplotlib.use('Agg')
 import matplotlib.pyplot as plt
 import pandas as pd
+import ROOT
+import time
 
 # sklearn
 from sklearn.ensemble import AdaBoostClassifier, RandomForestClassifier
@@ -14,6 +16,9 @@ from sklearn.externals import joblib
 from sklearn.model_selection import train_test_split
 # TTXPheno
 from TTXPheno.Tools.user import plot_directory, tmp_directory
+
+#start the timer
+start = time.time()
 
 #Arguments
 import argparse
@@ -35,7 +40,7 @@ argParser.add_argument('--swap_hypothesis', action='store_true', help="Chance th
 args = argParser.parse_args()
 
 #Set the version of the script
-vversion = 'v8'
+vversion = 'v9'
 
 #set criterion, you can choose from (gini, kule, entropy, hellinger)
 
@@ -116,7 +121,9 @@ reached_trainings_score = bdt.score(X_train,y_train,w_train)
 reached_validation_score = bdt.score(X_test, y_test, w_test)
 logger.info('Reached a trainings score of %f, and a validation score of %f',  reached_trainings_score,reached_validation_score )
 
-
+#stop the time to train the tree
+ende_training = time.time()
+logger.info('Time to train the tree ' +  '{:5.3f}s'.format(ende_training-start))
 
 #get the directory for data
 output_dir = os.path.join(tmp_directory, args.data_version)
@@ -146,105 +153,65 @@ if not os.path.exists(output_directory):
     os.makedirs(output_directory)
 logger.info('Save to %s directory', output_directory)
 
-#setup plot attributes
-plot_colors = "brk"
-plot_step = 0.25
-class_names = ["SM","BSM","Event"]
-plt.figure(figsize=(12, 13))
+#setup the historgramms
+h_dis_train_SM = ROOT.TH1F("dis_train_sm", "Discriminator for SM trainingsdata", 10, -1, 1)
+h_dis_train_BSM = ROOT.TH1F("dis_train_bsm", "Discriminator for BSM trainingsdata", 10, -1, 1)
+h_dis_test_SM = ROOT.TH1F("dis_test_sm", "Discriminator for SM testdata", 10, -1, 1)
+h_dis_test_BSM = ROOT.TH1F("dis_test_bsm", "Discriminator for BSM testdata", 10, -1, 1)
 
-#Plot the decision boundaries and generate the decision data
-plt.subplot(224)
-x_min, x_max = X[:, 0].min() - 1, X[:, 0].max() + 1
-y_min, y_max = X[:, 1].min() - 1, X[:, 1].max() + 1
-xx, yy = np.meshgrid(np.arange(x_min, x_max, plot_step),
-                     np.arange(y_min, y_max, plot_step))
-Z = bdt.decision_function(np.c_[xx.ravel(), yy.ravel()]) #use bdt.predict for non gradient filling
+#set the error calculationsmethod
+ROOT.TH1.SetDefaultSumw2()
 
-#fill the plot with gradient color
-Z = Z.reshape(xx.shape)
-plt.pcolormesh(xx,yy,Z, cmap=plt.cm.coolwarm)
-cs = plt.contourf(xx, yy, Z, cmap=plt.cm.coolwarm) #plt.contour(.., linewidth=0.75, colors='k') draws edges
-plt.axis("tight")
-
-#Plot the training points
-for i, n, c in zip(range(2), class_names[:2], plot_colors[:2]):
-    idx = np.where(y == i) #to filter weights: np.intersect1d(np.where(y == i), np.where(...))
-    plt.scatter(X[idx, 0], X[idx, 1],
-                c=c, cmap=plt.cm.coolwarm,
-                s=20, edgecolor='k',
-                label="Class %s" % n,
-                marker=".")
-plt.xlim(x_min, x_max)
-plt.ylim(y_min, y_max)
-plt.legend(loc='upper right')
-plt.xlabel('p_T(T) (GeV)')
-plt.ylabel('Cos(Theta*)')
-plt.title('Decision Boundary')
-
-#make a list for iterating over different weights
-plot_weights = [w0,w1, weight_mean_array]
-
-#Plot the Histogramm for the number of Events over genZ_p weighted with sm and bsm..
-plt.subplot(221)
-plot_range = (df['genZ_pt/F'].min(), df['genZ_pt/F'].max())
-for i, n, c in zip(range(3), class_names, plot_colors):
-    plt.hist(df['genZ_pt/F'],
-        bins=50, 
-        range=plot_range, 
-        weights=plot_weights[i],
-        facecolor=c,
-        label='%s Data' % n,
-        alpha=.5,
-        edgecolor='k',
-        log=args.log_plot)
-plt.ylabel('Number of Events')
-plt.xlabel('p_T(Z) (GeV)')
-plt.title('Weighted p_T(Z)')
-plt.legend(loc='upper right')
+#set colors
+h_dis_train_SM.SetLineColor(ROOT.kBlue+2)
+h_dis_train_BSM.SetLineColor(ROOT.kRed+2)
+h_dis_test_SM.SetLineColor(ROOT.kBlue-5)
+h_dis_test_BSM.SetLineColor(ROOT.kRed-4)
 
 
-#Plot the decision diagram
-discrimantor  = bdt.decision_function(X)
-plot_range = (score.min(), score.max())
-plt.subplot(222)
-for i, n, c in zip(range(2), class_names[:2], plot_colors[:2]):
-    plt.hist(score[i*len(X)/2:(i+1)*len(X)/2] ,
-             bins=10,
-             range=plot_range,
-             facecolor=c,
-             weights=plot_weights[i],
-             label='Class %s' % n,
-             alpha=.5,
-             edgecolor='k')
-    x1, x2, y1, y2 = plt.axis()
-    plt.axis((x1, x2, y1, y2 * 1.2))
-    plt.legend(loc='upper right')
-    plt.ylabel('Samples')
-    plt.xlabel('Score \n ' + str(reached_score))
-    plt.title('Decision Scores')
+#set colors
+h_dis_train_SM.SetFillColor(ROOT.kBlue+2)
+h_dis_train_BSM.SetFillColor(ROOT.kRed+2)
+h_dis_test_SM.SetFillColor(ROOT.kBlue-5)
+h_dis_test_BSM.SetFillColor(ROOT.kRed-4)
 
-plt.tight_layout()
-plt.subplots_adjust(wspace=0.35)
+#set fill styles
+h_dis_train_SM.SetFillStyle(3001)
+h_dis_train_BSM.SetFillStyle(3001)
+h_dis_test_SM.SetFillStyle(3001)
+h_dis_test_BSM.SetFillStyle(3001)
 
 
-#Draw the same event plot with Theta Star insted of ptz
-plt.subplot(223)
-plot_range = (df['genZ_cosThetaStar/F'].min(), df['genZ_cosThetaStar/F'].max())
-for i, n, c in zip(range(3), class_names, plot_colors):
-    plt.hist(df['genZ_cosThetaStar/F'],
-        bins=50, 
-        range=plot_range, 
-        weights=plot_weights[i],
-        facecolor=c,
-        label='%s Data' % n,
-        alpha=.5,
-        edgecolor='k',
-        log=args.log_plot)
-plt.ylabel('Number of Events')
-plt.xlabel('cos(Theta)')
-plt.title('Weighted cos(Theta)')
-plt.legend(loc='upper right')
+logger.info('Zeit bis vor der Loop: ' + '{:5.3f}s'.format(time.time()-start))
+
+#loop over the feature vektor to fill the histogramms (test data)
+
+for i in xrange(len(X_test)):
+    if y_test[i] == 0:
+        h_dis_test_SM.Fill(bdt.decision_function([X_test[i]]),w_test[i])
+    else:
+        h_dis_test_BSM.Fill(bdt.decision_function([X_test[i]]),w_test[i])
+
+#fill with trainings data
+for i in xrange(len(X_test)): 
+    if y_test[i] == 0:
+        h_dis_train_SM.Fill(bdt.decision_function([X_train[i]]),w_train[i])
+    else:
+        h_dis_train_BSM.Fill(bdt.decision_function([X_train[i]]),w_train[i])
+
+logger.info('Zeit bis vor nach der Loop: ' + '{:5.3f}s'.format(time.time()-start))
 
 
-#save the plot
-plt.savefig(os.path.join( output_directory,  'pandas-ttz-' + version + '.png'))
+#Plot the diagramms
+c = ROOT.TCanvas()
+h_dis_train_SM.Draw("h e")
+h_dis_train_BSM.Draw("h same e")
+h_dis_test_SM.Draw("h same e")
+h_dis_test_BSM.Draw("h same e")
+
+#Save to file
+c.Print(os.path.join( output_directory, 'ttz-kule' + version + '.png'))
+
+#stop the timer
+ende = time.time()
+logger.info('Ende des Runs, Laufzeit: ' + '{:5.3f}s'.format(ende-start))
