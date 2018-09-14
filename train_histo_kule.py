@@ -224,7 +224,7 @@ h_dis_test_BSM.Scale(1/h_dis_test_BSM.Integral())
 
 
 #Plot the diagramms
-c = ROOT.TCanvas()
+c = ROOT.TCanvas("Discriminator", "", 1920, 1080)
 h_dis_train_SM.Draw("h e")
 h_dis_train_BSM.Draw("h same e")
 h_dis_test_SM.Draw("h same e")
