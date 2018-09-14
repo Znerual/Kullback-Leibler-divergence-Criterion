@@ -230,12 +230,21 @@ h_dis_train_BSM.Draw("h same e")
 h_dis_test_SM.Draw("h same e")
 h_dis_test_BSM.Draw("h same e")
 
+#Berechne die Kule Div
+kl = KullbackLeibner(logger)
+kule_test, error_test = kl.kule_div(h_dis_test_SM, h_dis_test_BSM)
+kule_train, error_train = kl.kule_div(h_dis_train_SM, h_dis_train_BSM)
+logger.info('Kullback-Leibner Divergenz:\nTraining: %f and error: %f \nTesting: %f and error: %f',kule_train,error_train, kule_test, error_test)
+
 #add a legend
 leg = ROOT.TLegend(0.7, 0.9, 0.9, 0.7)
 leg.AddEntry(h_dis_train_SM,"SM Training")
 leg.AddEntry(h_dis_train_BSM,"BSM Training")
 leg.AddEntry(h_dis_test_SM,"SM Testing")
 leg.AddEntry(h_dis_test_BSM,"BSM Testing")
+leg.AddEntry(0, "Kul.div. test: " + str(kule_test) + " train: " + str(kule_train), "")
+leg.AddEntry(0, "Kul.div. error  test: " + str(error_test) + " train: " + str(error_train), "")
+
 leg.Draw()
 
 #label the axes
@@ -246,10 +255,6 @@ h_dis_train_SM.GetYaxis().SetTitle("Normalized number of events")
 c.Print(os.path.join( output_directory, 'ttz-kule' + version + '.png'))
 
 
-#Berechne die Kule Div
-kl = KullbackLeibner(logger)
-kule, error = kl.kule_div(h_dis_test_SM, h_dis_test_BSM)
-logger.info('Kullback-Leibner Divergenz: %f and error: %f',kule,error)
 
 #stop the timer
 ende = time.time()

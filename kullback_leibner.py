@@ -20,7 +20,7 @@ class KullbackLeibner:
                     try:
                         lg = np.log(p/q)
                         kule += p * lg
-                        error += np.square(w_bsm) * (np.square(1 + lg)) + np.square(p * w_sm/ q) 
+                        error += np.square(w_bsm) * (np.square(1.0 + lg)) + np.square(p * w_sm/ q) 
                     except ZeroDivisionError:                    
                         self.logger.warning("Divided by zero np.log(%f/%f)", p,q) 
                     except FloatingPointError:
