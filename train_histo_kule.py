@@ -134,7 +134,15 @@ para_optim = parameters[i_para_optimal]
 logger.info("The optimal Parameter was: %i", para_optim)
 #stop the time to train the tree
 ende_training = time.time()
+
+bdt = AdaBoostClassifier(dt, alorithm = args.boost_algorithm, n_estimators=para_optim)
+bdt.fit(X_train, y_train, w_train)
+
 logger.info('Time to train the tree ' +  '{:5.3f}s'.format(ende_training-start))
+
+
+
+
 
 #get the directory for data
 output_dir = os.path.join(tmp_directory, args.data_version)
@@ -163,6 +171,20 @@ output_directory = os.path.join(plot_directory,'Kullback-Leibner-Plots',  argPar
 if not os.path.exists(output_directory):
     os.makedirs(output_directory)
 logger.info('Save to %s directory', output_directory)
+
+
+#show the performance plot
+plt.semilogx(parameter, train_score, label='Train')
+plt.semilogx(parameter, test_score, label='Test')
+plt.vlines(para_optim, plt.ylim()[0], np.max(test_score), color='k',
+           linewidth=3, label='Optimum on test')
+plt.legend(loc='lower left')
+plt.ylim([0, 1.2])
+plt.xlabel('Regularization parameter')
+plt.ylabel('Performance')
+
+#save the matlib plot
+plt.savefig(os.path.join( output_directory, 'training_performance' + version + '.png'))
 
 #setup the historgramms
 h_dis_train_SM = ROOT.TH1F("dis_train_sm", "Discriminator", 25, -1, 1)
@@ -229,6 +251,11 @@ h_dis_train_BSM.Scale(1/h_dis_train_BSM.Integral())
 h_dis_test_SM.Scale(1/h_dis_test_SM.Integral())
 h_dis_test_BSM.Scale(1/h_dis_test_BSM.Integral())
 
+#Berechne die Kule Div
+kl = KullbackLeibner(logger)
+kule_test, error_test = kl.kule_div(h_dis_test_SM, h_dis_test_BSM)
+kule_train, error_train = kl.kule_div(h_dis_train_SM, h_dis_train_BSM)
+logger.info('Kullback-Leibner Divergenz:\nTraining: %f and error: %f \nTesting: %f and error: %f',kule_train,error_train, kule_test, error_test)
 
 #Plot the diagramms
 c = ROOT.TCanvas("Discriminator", "", 2880, 1620)
@@ -237,11 +264,6 @@ h_dis_train_BSM.Draw("h same e")
 h_dis_test_SM.Draw("h same e")
 h_dis_test_BSM.Draw("h same e")
 
-#Berechne die Kule Div
-kl = KullbackLeibner(logger)
-kule_test, error_test = kl.kule_div(h_dis_test_SM, h_dis_test_BSM)
-kule_train, error_train = kl.kule_div(h_dis_train_SM, h_dis_train_BSM)
-logger.info('Kullback-Leibner Divergenz:\nTraining: %f and error: %f \nTesting: %f and error: %f',kule_train,error_train, kule_test, error_test)
 
 #add a legend
 leg = ROOT.TLegend(0.65, 0.9, 0.9, 0.65)

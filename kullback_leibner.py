@@ -27,3 +27,5 @@ class KullbackLeibner:
                         self.logger.warning("Floating Point Error np.log(%f/%f)", p,q) 
                      
         return kule, error
+
+        

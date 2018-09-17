@@ -19,10 +19,10 @@ from TTXPheno.Tools.user import plot_directory
 
 X,y,w, w_min = gauss_easy(n_samples_bsm=400, n_samples_sm= 300)
 #X,y,w,w_min = ttz_dataset()
-print X[:2]
-print y[:2]
-print w[:2]
-print w_min
+#print X[:2]
+#print y[:2]
+#print w[:2]
+#print w_min
 
 #assert False, "End of test reached"
 
@@ -41,10 +41,10 @@ bdt.fit(X, y, w)
 #from sklearn.ensemble import RandomForestClassifier
 #bdt = RandomForestClassifier(criterion=kldc, max_depth=2, n_estimators=100)
 #bdt.fit(X, y)
+score = bdt.score(X,y,w)
+print('distance score: ', score)
 
-print('distance score: ', bdt.score(X, y))
-
-assert False, "End of test"
+#assert False, "End of test"
 
 plot_colors = "br"
 plot_step = 0.02
@@ -97,12 +97,12 @@ x1, x2, y1, y2 = plt.axis()
 plt.axis((x1, x2, y1, y2 * 1.2))
 plt.legend(loc='upper right')
 plt.ylabel('Samples')
-plt.xlabel('Score')
+plt.xlabel('Score \n ' + str(score))
 plt.title('Decision Scores')
 
 plt.tight_layout()
 plt.subplots_adjust(wspace=0.35)
 
 
-plt.savefig(os.path.join( plot_directory, 'Kullback-Leibner-Plots','fist-ttz.png'))
+plt.savefig(os.path.join( plot_directory, 'Kullback-Leibner-Plots','gauss-comparison.png'))
 #plt.show()
