@@ -47,7 +47,7 @@ argParser.add_argument('--random_state', action='store', default=0, type=int,nar
 args = argParser.parse_args()
 
 #Set the version of the script
-vversion = 'v10'
+vversion = 'v11'
 
 #set criterion, you can choose from (gini, kule, entropy, hellinger)
 
@@ -86,24 +86,41 @@ y0 = np.zeros(len(X1))
 y1 = np.ones(len(X1))
 y = np.concatenate((y0,y1))
     #read weights
+#normalize weights, used the mean to scale it before
 w0 = np.array(df['sm_weight'])
-sm_weight_mean = np.mean(w0)
-w0 /= sm_weight_mean
+sm_weight_sum = np.sum(w0)
+w0 /= sm_weight_sum
 w1 = np.array(df['bsm_weight'])
-bsm_weight_mean = np.mean(w1)
-w1 /= bsm_weight_mean
+bsm_weight_sum = np.sum(w1)
+w1 /= bsm_weight_sum
 if args.swap_hypothesis:
     w = np.concatenate((w1,w0))
 else:
     w = np.concatenate((w0,w1))
-    #calculate weight mean and stretch it to an array
-weight_mean = np.mean([sm_weight_mean, bsm_weight_mean])
-weight_mean_array = np.full([len(w0)], weight_mean)
 
-logger.info('Mean of sm_weights: %f, mean of bsm_weights: %f',sm_weight_mean, bsm_weight_mean  )
+logger.info('Sum of sm_weights: %f, Sum of bsm_weights: %f',sm_weight_sum, bsm_weight_sum  )
 
 #split the data into validation and trainings set
 X_train, X_test, y_train, y_test, w_train, w_test = train_test_split(X,y,w,test_size= 0.5, random_state=0)
+
+#caluclate the sum of weights
+w_test_sum_sm = 0.0
+w_test_sum_bsm = 0.0
+w_train_sum_sm = 0.0
+w_train_sum_bsm = 0.0
+for i  in xrange(len(w_train)):
+    if y_train[i] == 0:
+        w_train_sum_sm += w_train[i]
+    else:
+        w_train_sum_bsm += w_train[i]
+
+for i  in xrange(len(w_test)):
+    if y_test[i] == 0:
+        w_test_sum_sm += w_test[i]
+    else:
+        w_test_sum_bsm += w_test[i]
+
+logger.info('Yields, Training SM: %f, Training BSM: %f, Testing SM: %f, Testing BSM %f', w_train_sum_sm, w_train_sum_bsm, w_test_sum_sm, w_test_sum_bsm)
 
 #Create the tree
 if args.criterion == 'kule':
@@ -135,7 +152,7 @@ logger.info("The optimal Parameter was: %i", para_optim)
 #stop the time to train the tree
 ende_training = time.time()
 
-bdt = AdaBoostClassifier(dt, alorithm = args.boost_algorithm, n_estimators=para_optim)
+bdt = AdaBoostClassifier(dt, algorithm = args.boost_algorithm, n_estimators=para_optim)
 bdt.fit(X_train, y_train, w_train)
 
 logger.info('Time to train the tree ' +  '{:5.3f}s'.format(ende_training-start))
@@ -172,25 +189,120 @@ if not os.path.exists(output_directory):
     os.makedirs(output_directory)
 logger.info('Save to %s directory', output_directory)
 
-
+#pyplot settings
+class_names = ["SM Test", "BSM Test" , "SM Train", "BSM Train"]
+plot_colors = ["#000cff","#ff0000", "#9ba0ff" , "#ff8d8d"]
+plt.figure(figsize=(12,12))
+plot_step = 0.25
+plot_range = (min(min(train_scores), min(test_scores), max(max(train_scores), max(test_scores))))
 #show the performance plot
-plt.semilogx(parameter, train_score, label='Train')
-plt.semilogx(parameter, test_score, label='Test')
-plt.vlines(para_optim, plt.ylim()[0], np.max(test_score), color='k',
+plt.subplot(2,2,1)
+plt.plot(parameters, train_scores, label='Train')
+plt.plot(parameters, test_scores, label='Test')
+plt.vlines(para_optim, plt.ylim()[0], np.max(test_scores), color='k',
            linewidth=3, label='Optimum on test')
 plt.legend(loc='lower left')
-plt.ylim([0, 1.2])
+plt.ylim(plot_range)
 plt.xlabel('Regularization parameter')
 plt.ylabel('Performance')
 
+#Plot the decision diagram
+plt.subplot(2,2,2)
+test_decision_function = bdt.decision_function(X_test)
+train_decision_function = bdt.decision_function(X_train)
+plot_range = (test_decision_function.min(), test_decision_function.max())
+
+for i, n, c in zip(range(4), class_names, plot_colors):
+    if i > 1:
+        dec_func = train_decision_function
+        weight = w_train
+        label = y_train
+    else:
+        dec_func = test_decision_function
+        weight = w_test
+        label = y_test
+    plt.hist(dec_func[np.where(label == i % 2)] ,
+             bins=10,
+             range=plot_range,
+             facecolor=c,
+             weights=weight[np.where(label == i % 2)],
+             label='Class %s' %  n,
+             alpha=.5,
+             edgecolor='k')
+    x1, x2, y1, y2 = plt.axis()
+    plt.axis((x1, x2, y1, y2 * 1.2))
+    plt.legend(loc='upper right')
+    plt.ylabel('Samples')
+    plt.xlabel('Score' )
+    plt.title('Decision Scores')
+
+#Plot the decision boundaries and generate the decision data for test data
+plt.subplot(2,2,3)
+x_min, x_max = X_test[:, 0].min() - 1, X_test[:, 0].max() + 1
+y_min, y_max = X_test[:, 1].min() - 1, X_test[:, 1].max() + 1
+xx, yy = np.meshgrid(np.arange(x_min, x_max, plot_step),
+                     np.arange(y_min, y_max, plot_step))
+Z = bdt.decision_function(np.c_[xx.ravel(), yy.ravel()]) #use bdt.predict for no
+
+#fill the plot with gradient color
+Z = Z.reshape(xx.shape)
+plt.pcolormesh(xx,yy,Z, cmap=plt.cm.coolwarm)
+cs = plt.contourf(xx, yy, Z, cmap=plt.cm.coolwarm) #plt.contour(.., linewidth=0.
+plt.axis("tight")
+
+##Plot the training points
+#for i, n, c in zip(range(2), class_names[:2], plot_colors[:2]):
+#    idx = np.where(y_test == i) #to filter weights: np.intersect1d(np.where(y == i), 
+#    plt.scatter(X_test[idx, 0], X_test[idx, 1],
+#                c=c, cmap=plt.cm.coolwarm,
+#                s=20, edgecolor='k',
+#                label="Class %s" % n,
+#                marker=".")
+plt.xlim(x_min, x_max)
+plt.ylim(y_min, y_max)
+plt.legend(loc='upper right')
+plt.xlabel('p_T(T) (GeV) \n for Test Data')
+plt.ylabel('Cos(Theta*)')
+plt.title('Decision Boundary')
+
+#Plot the decision boundaries and generate the decision data for training data
+plt.subplot(2,2,4)
+x_min, x_max = X_train[:, 0].min() - 1, X_train[:, 0].max() + 1
+y_min, y_max = X_train[:, 1].min() - 1, X_train[:, 1].max() + 1
+xx, yy = np.meshgrid(np.arange(x_min, x_max, plot_step),
+                     np.arange(y_min, y_max, plot_step))
+Z = bdt.decision_function(np.c_[xx.ravel(), yy.ravel()]) #use bdt.predict for no
+
+#fill the plot with gradient color
+Z = Z.reshape(xx.shape)
+plt.pcolormesh(xx,yy,Z, cmap=plt.cm.coolwarm)
+cs = plt.contourf(xx, yy, Z, cmap=plt.cm.coolwarm) #plt.contour(.., linewidth=0.
+plt.axis("tight")
+
+##Plot the training points
+#for i, n, c in zip(range(2), class_names[:2], plot_colors[:2]):
+#    idx = np.where(y_train == i) #to filter weights: np.intersect1d(np.where(y == i), 
+#    plt.scatter(X_train[idx, 0], X_train[idx, 1],
+#                c=c, cmap=plt.cm.coolwarm,
+#                s=20, edgecolor='k',
+#                label="Class %s" % n,
+#                marker=".")
+plt.xlim(x_min, x_max)
+plt.ylim(y_min, y_max)
+plt.legend(loc='upper right')
+plt.xlabel('p_T(T) (GeV) \n for Trainings Data')
+plt.ylabel('Cos(Theta*)')
+plt.title('Decision Boundary')
+
+
 #save the matlib plot
-plt.savefig(os.path.join( output_directory, 'training_performance' + version + '.png'))
+plt.savefig(os.path.join( output_directory, 'perf-desc-boundary' + version + '.png'))
 
 #setup the historgramms
-h_dis_train_SM = ROOT.TH1F("dis_train_sm", "Discriminator", 25, -1, 1)
-h_dis_train_BSM = ROOT.TH1F("dis_train_bsm", "Discriminator", 25, -1, 1)
-h_dis_test_SM = ROOT.TH1F("dis_test_sm", "Discriminator", 25, -1, 1)
-h_dis_test_BSM = ROOT.TH1F("dis_test_bsm", "Discriminator", 25, -1, 1)
+h_dis_train_SM = ROOT.TH1F("dis_train_sm", "Discriminator", 12, -1, 1)
+h_dis_train_BSM = ROOT.TH1F("dis_train_bsm", "Discriminator", 12, -1, 1)
+h_dis_test_SM = ROOT.TH1F("dis_test_sm", "Discriminator", 12, -1, 1)
+h_dis_test_BSM = ROOT.TH1F("dis_test_bsm", "Discriminator", 12, -1, 1)
 
 #set the error calculationsmethod
 ROOT.TH1.SetDefaultSumw2()
@@ -206,6 +318,13 @@ h_dis_train_SM.SetLineWidth(3)
 h_dis_train_BSM.SetLineWidth(3)
 h_dis_test_SM.SetLineWidth(3)
 h_dis_test_BSM.SetLineWidth(3)
+
+#set line style
+h_dis_train_SM.SetLineStyle(7)
+h_dis_train_BSM.SetLineStyle(7)
+h_dis_test_SM.SetLineStyle(1)
+h_dis_test_BSM.SetLineStyle(1)
+
 
 
 #set colors
@@ -225,8 +344,6 @@ ROOT.gStyle.SetOptStat(0)
 
 logger.info('Zeit bis vor der Loop: ' + '{:5.3f}s'.format(time.time()-start))
 
-test_decision_function = bdt.decision_function(X_test)
-train_decision_function = bdt.decision_function(X_train)
 
 #loop over the feature vektor to fill the histogramms (test data)
 
@@ -237,19 +354,27 @@ for i in xrange(len(X_test)):
         h_dis_test_BSM.Fill(test_decision_function[i],w_test[i])
 
 #fill with trainings data
-for i in xrange(len(X_test)): 
-    if y_test[i] == 0:
+for i in xrange(len(X_train)): 
+    if y_train[i] == 0:
         h_dis_train_SM.Fill(train_decision_function[i],w_train[i])
     else:
         h_dis_train_BSM.Fill(train_decision_function[i],w_train[i])
 
 logger.info('Zeit bis vor nach der Loop: ' + '{:5.3f}s'.format(time.time()-start))
 
+#calcuate the yields after fitting
+w_train_sum_sm = h_dis_train_SM.Integral()
+w_train_sum_bsm = h_dis_train_BSM.Integral()
+w_test_sum_sm = h_dis_test_SM.Integral()
+w_test_sum_bsm = h_dis_test_BSM.Integral()
+
+logger.info("Yields after fitting: Training SM %f, Train BSM %f, Testing SM %f, Testing BSM %f",w_train_sum_sm, w_train_sum_bsm, w_test_sum_sm, w_test_sum_bsm )
+
 #normalize the histograms
-h_dis_train_SM.Scale(1/h_dis_train_SM.Integral())
-h_dis_train_BSM.Scale(1/h_dis_train_BSM.Integral())
-h_dis_test_SM.Scale(1/h_dis_test_SM.Integral())
-h_dis_test_BSM.Scale(1/h_dis_test_BSM.Integral())
+h_dis_train_SM.Scale(1/w_train_sum_sm)
+h_dis_train_BSM.Scale(1/w_train_sum_bsm)
+h_dis_test_SM.Scale(1/w_test_sum_sm)
+h_dis_test_BSM.Scale(1/w_test_sum_bsm)
 
 #Berechne die Kule Div
 kl = KullbackLeibner(logger)
@@ -259,6 +384,15 @@ logger.info('Kullback-Leibner Divergenz:\nTraining: %f and error: %f \nTesting: 
 
 #Plot the diagramms
 c = ROOT.TCanvas("Discriminator", "", 2880, 1620)
+h_dis_train_SM.Draw("h e")
+h_dis_train_BSM.Draw("h same e")
+h_dis_test_SM.Draw("h same e")
+h_dis_test_BSM.Draw("h same e")
+
+#get the maximum value
+max_value_hist = max(h_dis_train_SM.GetMaximum(), h_dis_train_BSM.GetMaximum(), h_dis_test_SM.GetMaximum(), h_dis_test_BSM.GetMaximum())
+#scale the plots
+h_dis_train_SM.SetMaximum(max_value_hist)
 h_dis_train_SM.Draw("h e")
 h_dis_train_BSM.Draw("h same e")
 h_dis_test_SM.Draw("h same e")
