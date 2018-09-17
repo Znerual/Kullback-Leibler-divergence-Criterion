@@ -299,10 +299,10 @@ plt.title('Decision Boundary')
 plt.savefig(os.path.join( output_directory, 'perf-desc-boundary' + version + '.png'))
 
 #setup the historgramms
-h_dis_train_SM = ROOT.TH1F("dis_train_sm", "Discriminator", 12, -1, 1)
-h_dis_train_BSM = ROOT.TH1F("dis_train_bsm", "Discriminator", 12, -1, 1)
-h_dis_test_SM = ROOT.TH1F("dis_test_sm", "Discriminator", 12, -1, 1)
-h_dis_test_BSM = ROOT.TH1F("dis_test_bsm", "Discriminator", 12, -1, 1)
+h_dis_train_SM = ROOT.TH1D("dis_train_sm", "Discriminator", 12, -1, 1)
+h_dis_train_BSM = ROOT.TH1D("dis_train_bsm", "Discriminator", 12, -1, 1)
+h_dis_test_SM = ROOT.TH1D("dis_test_sm", "Discriminator", 12, -1, 1)
+h_dis_test_BSM = ROOT.TH1D("dis_test_bsm", "Discriminator", 12, -1, 1)
 
 #set the error calculationsmethod
 ROOT.TH1.SetDefaultSumw2()
@@ -362,13 +362,26 @@ for i in xrange(len(X_train)):
 
 logger.info('Zeit bis vor nach der Loop: ' + '{:5.3f}s'.format(time.time()-start))
 
+#setup the delta weights for comparison (only for DEBUGGING)
+w_delta_test_sum_sm = w_test_sum_sm
+w_delta_test_sum_bsm = w_test_sum_bsm
+w_delta_train_sum_sm = w_train_sum_sm 
+w_delta_train_sum_bsm = w_train_sum_bsm
+
 #calcuate the yields after fitting
 w_train_sum_sm = h_dis_train_SM.Integral()
 w_train_sum_bsm = h_dis_train_BSM.Integral()
 w_test_sum_sm = h_dis_test_SM.Integral()
 w_test_sum_bsm = h_dis_test_BSM.Integral()
 
+#calculate the delta weights
+w_delta_test_sum_sm -= w_test_sum_sm
+w_delta_test_sum_bsm -= w_test_sum_bsm
+w_delta_train_sum_sm -= w_train_sum_sm 
+w_delta_train_sum_bsm -= w_train_sum_bsm
+
 logger.info("Yields after fitting: Training SM %f, Train BSM %f, Testing SM %f, Testing BSM %f",w_train_sum_sm, w_train_sum_bsm, w_test_sum_sm, w_test_sum_bsm )
+logger.info("Difference of the weights before and after fitting: Test SM %f, Test BSM %f, Train SM %f, Train BSM %f", w_delta_test_sum_sm, w_delta_test_sum_bsm, w_delta_train_sum_sm, w_delta_train_sum_bsm)
 
 #normalize the histograms
 h_dis_train_SM.Scale(1/w_train_sum_sm)
@@ -391,8 +404,9 @@ h_dis_test_BSM.Draw("h same e")
 
 #get the maximum value
 max_value_hist = max(h_dis_train_SM.GetMaximum(), h_dis_train_BSM.GetMaximum(), h_dis_test_SM.GetMaximum(), h_dis_test_BSM.GetMaximum())
+max_value_margin = max_value_hist / 10.0
 #scale the plots
-h_dis_train_SM.SetMaximum(max_value_hist)
+h_dis_train_SM.SetMaximum(max_value_hist + max_value_margin)
 h_dis_train_SM.Draw("h e")
 h_dis_train_BSM.Draw("h same e")
 h_dis_test_SM.Draw("h same e")
