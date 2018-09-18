@@ -98,9 +98,9 @@ dtkule = DecisionTreeClassifier(max_depth= 2, criterion=kldc)
 dtgini = DecisionTreeClassifier(max_depth= 2, criterion='gini')
 dtentropy = DecisionTreeClassifier(max_depth=2, criterion='entropy')
 
-bdtkule = AdaBoostClassifier(dtkule, algorithm= args.boost_algorithm,n_estimators= args.n_est)
-bdtgini = AdaBoostClassifier(dtgini, algorithm= args.boost_algorithm,n_estimators= args.n_est)
-bdtentropy = AdaBoostClassifier(dtentropy, algorithm= args.boost_algorithm,n_estimators= args.n_est)
+bdtkule = AdaBoostClassifier(dtkule, algorithm= args.boost_algorithm,n_estimators= args.n_est, random_state = 0)
+bdtgini = AdaBoostClassifier(dtgini, algorithm= args.boost_algorithm,n_estimators= args.n_est, random_state = 0)
+bdtentropy = AdaBoostClassifier(dtentropy, algorithm= args.boost_algorithm,n_estimators= args.n_est, random_state = 0)
 
 bdtkule.fit(X_train, y_train, w_train)
 bdtgini.fit(X_train, y_train, w_train)
@@ -229,15 +229,15 @@ kule_test, error_test = kl.kule_div(gini_h_dis_test_SM, gini_h_dis_test_BSM)
 kule_train, error_train = kl.kule_div(gini_h_dis_train_SM, gini_h_dis_train_BSM)
 inv_kule_test, inv_error_test = kl.kule_div(gini_h_dis_test_BSM, gini_h_dis_test_SM)
 inv_kule_train, inv_error_train = kl.kule_div(gini_h_dis_train_BSM, gini_h_dis_train_SM)
-dataTrain.append(("Kule Train", kule_train,error_train, inv_kule_train, inv_error_train))
-dataTrain.append(("Kule Test", kule_test,error_test, inv_kule_test, inv_error_test))
+dataTrain.append(("Gini Train", kule_train,error_train, inv_kule_train, inv_error_train))
+dataTrain.append(("Gini Test", kule_test,error_test, inv_kule_test, inv_error_test))
     
 kule_test, error_test = kl.kule_div(entropy_h_dis_test_SM, entropy_h_dis_test_BSM)
 kule_train, error_train = kl.kule_div(entropy_h_dis_train_SM, entropy_h_dis_train_BSM)
 inv_kule_test, inv_error_test = kl.kule_div(entropy_h_dis_test_BSM, entropy_h_dis_test_SM)
 inv_kule_train, inv_error_train = kl.kule_div(entropy_h_dis_train_BSM, entropy_h_dis_train_SM)
-dataTrain.append(("Kule Train", kule_train,error_train, inv_kule_train, inv_error_train))
-dataTrain.append(("Kule Test", kule_test,error_test, inv_kule_test, inv_error_test))
+dataTrain.append(("Entropy Train", kule_train,error_train, inv_kule_train, inv_error_train))
+dataTrain.append(("Entropy Test", kule_test,error_test, inv_kule_test, inv_error_test))
     
 
 

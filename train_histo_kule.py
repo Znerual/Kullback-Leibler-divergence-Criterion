@@ -43,6 +43,7 @@ argParser.add_argument('--est_num', action='store', default=40, type=int,nargs='
 argParser.add_argument('--boost_algorithm', action='store', default='SAMME', nargs='?', choices=['SAMME', 'SAMME.R'], help="Choose a boosting algorithm for the AdaBoostClassifier")
 argParser.add_argument('--swap_hypothesis', action='store_true', help="Chance the Target Labels of SM and BSM Hypothesis")
 argParser.add_argument('--random_state', action='store', default=0, type=int,nargs='?',  help="The random state, which is given to the train_test_split method")
+argParser.add_argument('--ptz_only', action='store_true', help='Only use the pTZ feature for training')
 
 args = argParser.parse_args()
 
@@ -69,6 +70,8 @@ if args.log_plot:
     version += '_log'
 if args.swap_hypothesis:
     version += '_swap'
+if args.ptz_only:
+    version +='_ptconly'
 version += '_maxDepth' + str(args.max_depth) + '_estStart' + str( args.n_est_start) + '_estEnd' + str(args.n_est_end) + '_EstNum' + str(args.est_num) + '_BoostAlg'  + str(args.boost_algorithm) + '_RandState' + str(args.random_state)
 
 #find directory
@@ -78,8 +81,10 @@ logger.debug('Import data from %s', input_directory)
 
 #read data from file
 df = pd.read_hdf(os.path.join(input_directory, args.data))
-
-X1 = np.array(df[['genZ_pt/F','genZ_cosThetaStar/F']])
+if args.ptz_only:
+    X1 = np.array(df['genZ_pt/F'])
+else:
+    X1 = np.array(df[['genZ_pt/F','genZ_cosThetaStar/F']])
 X = np.concatenate((X1,X1))
     #generate targets
 y0 = np.zeros(len(X1))
@@ -98,6 +103,7 @@ if args.swap_hypothesis:
 else:
     w = np.concatenate((w0,w1))
 
+    
 logger.info('Sum of sm_weights: %f, Sum of bsm_weights: %f',sm_weight_sum, bsm_weight_sum  )
 
 #split the data into validation and trainings set
@@ -136,6 +142,9 @@ parameters = np.linspace(args.n_est_start, args.n_est_end, num=args.est_num, dty
 train_scores = []
 test_scores = []
 
+if args.ptz_only:
+    X_train = np.reshape(X_train, (-1,1))
+    X_test = np.reshape(X_test, (-1,1))
 for para in parameters:
     # Create and fit an AdaBoosted decision tree
     bdt = AdaBoostClassifier(dt, algorithm= args.boost_algorithm,n_estimators= para)
@@ -156,9 +165,6 @@ bdt = AdaBoostClassifier(dt, algorithm = args.boost_algorithm, n_estimators=para
 bdt.fit(X_train, y_train, w_train)
 
 logger.info('Time to train the tree ' +  '{:5.3f}s'.format(ende_training-start))
-
-
-
 
 
 #get the directory for data
@@ -238,16 +244,25 @@ for i, n, c in zip(range(4), class_names, plot_colors):
 
 #Plot the decision boundaries and generate the decision data for test data
 plt.subplot(2,2,3)
-x_min, x_max = X_test[:, 0].min() - 1, X_test[:, 0].max() + 1
-y_min, y_max = X_test[:, 1].min() - 1, X_test[:, 1].max() + 1
-xx, yy = np.meshgrid(np.arange(x_min, x_max, plot_step),
+if args.ptz_only:
+    x_min, x_max = X_test.min() - 1, X_test.max() + 1
+    xx = np.arange(x_min, x_max, plot_step)
+    xx = np.reshape(xx, (-1,1))
+    Z = bdt.decision_function(xx)
+    Z = np.reshape(Z, (-1,1))
+    y_min, y_max = Z.min() - 1, Z.max() + 1
+    plt.plot(xx, Z) 
+else:
+    x_min, x_max = X_test[:, 0].min() - 1, X_test[:, 0].max() + 1
+    y_min, y_max = X_test[:, 1].min() - 1, X_test[:, 1].max() + 1
+    xx, yy = np.meshgrid(np.arange(x_min, x_max, plot_step),
                      np.arange(y_min, y_max, plot_step))
-Z = bdt.decision_function(np.c_[xx.ravel(), yy.ravel()]) #use bdt.predict for no
+    Z = bdt.decision_function(np.c_[xx.ravel(), yy.ravel()]) #use bdt.predict for no
 
-#fill the plot with gradient color
-Z = Z.reshape(xx.shape)
-plt.pcolormesh(xx,yy,Z, cmap=plt.cm.coolwarm)
-cs = plt.contourf(xx, yy, Z, cmap=plt.cm.coolwarm) #plt.contour(.., linewidth=0.
+    #fill the plot with gradient color
+    Z = Z.reshape(xx.shape)
+    plt.pcolormesh(xx,yy,Z, cmap=plt.cm.coolwarm)
+    cs = plt.contourf(xx, yy, Z, cmap=plt.cm.coolwarm) #plt.contour(.., linewidth=0.
 plt.axis("tight")
 
 ##Plot the training points
@@ -261,22 +276,35 @@ plt.axis("tight")
 plt.xlim(x_min, x_max)
 plt.ylim(y_min, y_max)
 plt.legend(loc='upper right')
-plt.xlabel('p_T(T) (GeV) \n for Test Data')
-plt.ylabel('Cos(Theta*)')
+if args.ptz_only:
+    plt.xlabel("p_T(Z) GeV")
+    plt.ylabel("Decision Function")
+else:
+    plt.xlabel('p_T(Z) (GeV) \n for Test Data')
+    plt.ylabel('Cos(Theta*)')
 plt.title('Decision Boundary')
 
 #Plot the decision boundaries and generate the decision data for training data
 plt.subplot(2,2,4)
-x_min, x_max = X_train[:, 0].min() - 1, X_train[:, 0].max() + 1
-y_min, y_max = X_train[:, 1].min() - 1, X_train[:, 1].max() + 1
-xx, yy = np.meshgrid(np.arange(x_min, x_max, plot_step),
+if args.ptz_only:
+    x_min, x_max = X_train.min() - 1, X_test.max() + 1
+    xx = np.arange(x_min, x_max, plot_step)
+    xx = np.reshape(xx,(-1,1))
+    Z = bdt.decision_function(xx)
+    Z = np.reshape(Z, (-1,1))
+    y_min, y_max = Z.min() - 1, Z.max() + 1
+    plt.plot(xx, Z) 
+else:
+    x_min, x_max = X_train[:, 0].min() - 1, X_train[:, 0].max() + 1
+    y_min, y_max = X_train[:, 1].min() - 1, X_train[:, 1].max() + 1
+    xx, yy = np.meshgrid(np.arange(x_min, x_max, plot_step),
                      np.arange(y_min, y_max, plot_step))
-Z = bdt.decision_function(np.c_[xx.ravel(), yy.ravel()]) #use bdt.predict for no
+    Z = bdt.decision_function(np.c_[xx.ravel(), yy.ravel()]) #use bdt.predict for no
 
 #fill the plot with gradient color
-Z = Z.reshape(xx.shape)
-plt.pcolormesh(xx,yy,Z, cmap=plt.cm.coolwarm)
-cs = plt.contourf(xx, yy, Z, cmap=plt.cm.coolwarm) #plt.contour(.., linewidth=0.
+    Z = Z.reshape(xx.shape)
+    plt.pcolormesh(xx,yy,Z, cmap=plt.cm.coolwarm)
+    cs = plt.contourf(xx, yy, Z, cmap=plt.cm.coolwarm) #plt.contour(.., linewidth=0.
 plt.axis("tight")
 
 ##Plot the training points
@@ -290,8 +318,12 @@ plt.axis("tight")
 plt.xlim(x_min, x_max)
 plt.ylim(y_min, y_max)
 plt.legend(loc='upper right')
-plt.xlabel('p_T(T) (GeV) \n for Trainings Data')
-plt.ylabel('Cos(Theta*)')
+if args.ptz_only:
+    plt.xlabel("p_T(Z) GeV")
+    plt.ylabel("Decision Function")
+else:
+    plt.xlabel('p_T(T) (GeV) \n for Trainings Data')
+    plt.ylabel('Cos(Theta*)')
 plt.title('Decision Boundary')
 
 

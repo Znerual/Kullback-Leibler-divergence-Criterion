@@ -17,7 +17,7 @@ from gen_datasets import *
 # TTXPheno
 from TTXPheno.Tools.user import plot_directory 
 
-X,y,w, w_min = gauss_easy(n_samples_bsm=400, n_samples_sm= 300)
+X,y,w, w_min = gauss_easy(n_samples_bsm=4000, n_samples_sm= 4000)
 #X,y,w,w_min = ttz_dataset()
 #print X[:2]
 #print y[:2]
@@ -30,7 +30,8 @@ from kullback_leibner_divergence_criterion import KullbackLeibnerCriterion
 kldc = KullbackLeibnerCriterion(1, np.array([2], dtype='int64'))
 
 #Create the tree
-dt = DecisionTreeClassifier(max_depth=2, criterion=kldc)
+#dt = DecisionTreeClassifier(max_depth=2, criterion=kldc)
+dt = DecisionTreeClassifier(max_depth=2, criterion='gini')
 
 # Create and fit an AdaBoosted decision tree
 bdt = AdaBoostClassifier(dt,
@@ -65,14 +66,14 @@ cs = plt.contourf(xx, yy, Z, cmap=plt.cm.Paired)
 plt.axis("tight")
 
 # Plot the training points
-for i, n, c in zip(range(2), class_names, plot_colors):
-    idx = np.intersect1d(np.where(y == i),np.where(w > w_min))
-    #idx = np.where(y == i)
-    plt.scatter(X[idx, 0], X[idx, 1],
-                c=c, cmap=plt.cm.Paired,
-                s=20, edgecolor='k',
-                label="Class %s" % n,
-                marker=".")
+#for i, n, c in zip(range(2), class_names, plot_colors):
+#    idx = np.intersect1d(np.where(y == i),np.where(w > w_min))
+#    #idx = np.where(y == i)
+#    plt.scatter(X[idx, 0], X[idx, 1],
+#                c=c, cmap=plt.cm.Paired,
+#                s=20, edgecolor='k',
+#                label="Class %s" % n,
+#                marker=".")
 plt.xlim(x_min, x_max)
 plt.ylim(y_min, y_max)
 plt.legend(loc='upper right')
@@ -104,5 +105,5 @@ plt.tight_layout()
 plt.subplots_adjust(wspace=0.35)
 
 
-plt.savefig(os.path.join( plot_directory, 'Kullback-Leibner-Plots','gauss-comparison.png'))
+plt.savefig(os.path.join( plot_directory, 'Kullback-Leibner-Plots','gauss-comparison-sym-gini.png'))
 #plt.show()

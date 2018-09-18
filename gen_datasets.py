@@ -4,8 +4,8 @@ from sklearn.datasets import make_gaussian_quantiles
 
 def gauss_easy(n_samples_bsm, n_samples_sm):
     #Dataset creation
-    X1,y1 = make_gaussian_quantiles(mean=(2, 2), cov=1.5, n_samples=n_samples_bsm, n_features=2, n_classes=1, random_state=1)
-    X2,y2 = make_gaussian_quantiles(cov=1.2, n_samples=n_samples_sm, n_features=2, n_classes=1, random_state=1)
+    X1,y1 = make_gaussian_quantiles(mean=(2, 0), cov=1.5, n_samples=n_samples_bsm, n_features=2, n_classes=1, random_state=1)
+    X2,y2 = make_gaussian_quantiles(mean=(-2,0), cov=1.5, n_samples=n_samples_sm, n_features=2, n_classes=1, random_state=1)
     X12 = np.concatenate((X1,X2))
     X = np.concatenate((X12,X12))
     n_samle_size = len(X12)
@@ -43,8 +43,8 @@ def gauss_easy(n_samples_bsm, n_samples_sm):
 
 def gauss_hard(n_samples_bsm, n_samples_sm):
     #Dataset creation
-    X1,y1 = make_gaussian_quantiles(mean=(2, 2), cov=1.5, n_samples=n_samples_bsm, n_features=2, n_classes=1, random_state=1)
-    X2,y2 = make_gaussian_quantiles(cov=1.2, n_samples=n_samples_sm, n_features=2, n_classes=1, random_state=1)
+    X1,y1 = make_gaussian_quantiles(mean=(2, 0), cov=1.5, n_samples=n_samples_bsm, n_features=2, n_classes=1, random_state=1)
+    X2,y2 = make_gaussian_quantiles( cov=1.2, n_samples=n_samples_sm, n_features=2, n_classes=1, random_state=1)
 
     X12 = np.concatenate((X1,-X2 + 1))
     X = np.concatenate((X12,X12))

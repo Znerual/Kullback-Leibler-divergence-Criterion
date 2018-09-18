@@ -21,6 +21,63 @@ cdef bint DEBUG_proxy = False
 choice = 'kule'
 
 cdef class KullbackLeibnerCriterion(ClassificationCriterion):
+    cdef double proxy_impurity_improvement(self) nogil:
+        '''Compute a proxy of the impurity reduction
+        This method is used to speed up the search for the best split.
+        It is a proxy quantity such that the split that maximizes this value
+        also maximizes the impurity improvement. It neglects all constant terms
+        of the impurity decrease for a given split.
+        The absolute impurity improvement is only computed by the
+        impurity_improvement method once the best split has been found.'''
+        
+        cdef double impurity_left
+        cdef double impurity_right
+        self.children_impurity(&impurity_left, &impurity_right)
+        if DEBUG_proxy: 
+            with gil:
+                print "proxy_impurity_improvement " + str((- self.weighted_n_right * impurity_right
+                - self.weighted_n_left * impurity_left))
+ 
+        return (- self.weighted_n_right * impurity_right
+                - self.weighted_n_left * impurity_left)
+
+    cdef double impurity_improvement(self, double impurity) nogil:
+        '''Compute the improvement in impurity
+        This method computes the improvement in impurity when a split occurs.
+        The weighted impurity improvement equation is the following:
+            N_t / N * (impurity - N_t_R / N_t * right_impurity
+                                - N_t_L / N_t * left_impurity)
+        where N is the total number of samples, N_t is the number of samples
+        at the current node, N_t_L is the number of samples in the left child,
+        and N_t_R is the number of samples in the right child,
+        Parameters
+        ----------
+        impurity : double
+            The initial impurity of the node before the split
+        Return
+        ------
+        double : improvement in impurity after the split occurs'''
+        
+
+        cdef double impurity_left
+        cdef double impurity_right
+
+        self.children_impurity(&impurity_left, &impurity_right)
+        if DEBUG:
+            with gil:
+                print "Impurity Improvement " + str(((self.weighted_n_node_samples / self.weighted_n_samples) *
+                (impurity - (self.weighted_n_right /
+                             self.weighted_n_node_samples * impurity_right)
+                          - (self.weighted_n_left /
+                             self.weighted_n_node_samples * impurity_left))))
+
+        return ((self.weighted_n_node_samples / self.weighted_n_samples) *
+                (impurity - (self.weighted_n_right / 
+                             self.weighted_n_node_samples * impurity_right)
+                          - (self.weighted_n_left / 
+                             self.weighted_n_node_samples * impurity_left)))
+
+
     cdef double node_impurity(self) nogil:
         
         cdef SIZE_t* n_classes = self.n_classes
