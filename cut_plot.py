@@ -19,7 +19,7 @@ from sklearn.model_selection import train_test_split
 from TTXPheno.Tools.user import plot_directory, tmp_directory
 
 #Kullback Leibler Divergenz
-from criterion import KullbackLeibler
+from criterion import KullbackLeibler, Gini
 
 #start the timer
 start = time.time()
@@ -31,17 +31,11 @@ argParser.add_argument('--logLevel', action='store', default='INFO', nargs='?', 
 argParser.add_argument('--small', action='store_true', help='Use the small dataset')
 argParser.add_argument('--data', action='store',default='data.h5')
 argParser.add_argument('--data_version', action='store',default='v2',help='Version of the data to be used')
-argParser.add_argument('--log_plot', action='store_true',help='Use a logarithmic plot')
-argParser.add_argument('--save', action='store_true', help='Write the trained BDT to a file')
-argParser.add_argument('--criterion', action='store', default='kule', nargs='?', choices=['gini', 'kule', 'entropy'] , help="Select the Criterion to be used")
-argParser.add_argument('--export', action='store_true', help="Export the trainded tree as graphviz dot")
-argParser.add_argument('--no_plot', action='store_true', help="Don't generate a plot")
 argParser.add_argument('--max_depth', action='store', default=2, type=int,nargs='?',  help="The max depth argument, which is given to the DecisionTreeClassifier")
-argParser.add_argument('--n_est', action='store', default=100, type=int,nargs='?',  help="The n_estimators argument, which is given to the AdaBoostClassifier")
+argParser.add_argument('--est_num', action='store', default=40, type=int,nargs='?',  help="The number of steps between the start and end of n_estimators")
 argParser.add_argument('--boost_algorithm', action='store', default='SAMME', nargs='?', choices=['SAMME', 'SAMME.R'], help="Choose a boosting algorithm for the AdaBoostClassifier")
 argParser.add_argument('--swap_hypothesis', action='store_true', help="Chance the Target Labels of SM and BSM Hypothesis")
 argParser.add_argument('--random_state', action='store', default=0, type=int,nargs='?',  help="The random state, which is given to the train_test_split method")
-argParser.add_argument('--ptz_only', action='store_true', help='Only use the pTZ feature for training')
 
 args = argParser.parse_args()
 
@@ -60,17 +54,12 @@ kldc = KullbackLeiblerCriterion(1, np.array([2], dtype='int64'))
 
 #setting up the file save name
 version = vversion
-version += '_' + args.criterion
 if args.small:
     args.data_version += '_small'
     version += '_small'
-if args.log_plot:
-    version += '_log'
 if args.swap_hypothesis:
     version += '_swap'
-if args.ptz_only:
-    version +='_ptconly'
-version += '_maxDepth' + str(args.max_depth) +  '_n_est' + str(args.n_est) + '_BoostAlg'  + str(args.boost_algorithm) + '_RandState' + str(args.random_state)
+version += '_maxDepth' + str(args.max_depth) +  '_EstNum' + str(args.est_num) + '_BoostAlg'  + str(args.boost_algorithm) + '_RandState' + str(args.random_state)
 
 #find directory
 input_directory = os.path.join(tmp_directory, args.data_version)
@@ -79,10 +68,7 @@ logger.debug('Import data from %s', input_directory)
 
 #read data from file
 df = pd.read_hdf(os.path.join(input_directory, args.data))
-if args.ptz_only:
-    X1 = np.array(df['genZ_pt/F'])
-else:
-    X1 = np.array(df[['genZ_pt/F','genZ_cosThetaStar/F']])
+X1 = np.array(df[['genZ_pt/F','genZ_cosThetaStar/F']])
 X = np.concatenate((X1,X1))
     #generate targets
 y0 = np.zeros(len(X1))
@@ -127,25 +113,17 @@ for i  in xrange(len(w_test)):
 logger.info('Yields, Training SM: %f, Training BSM: %f, Testing SM: %f, Testing BSM %f', w_train_sum_sm, w_train_sum_bsm, w_test_sum_sm, w_test_sum_bsm)
 
 #Create the tree
-if args.criterion == 'kule':
-    dt = DecisionTreeClassifier(max_depth= args.max_depth, criterion=kldc)
-elif args.criterion == 'gini':
-    dt = DecisionTreeClassifier(max_depth= args.max_depth, criterion='gini')
-elif args.criterion == 'entropy':    
-    dt = DecisionTreeClassifier(max_depth= args.max_depth, criterion='entropy')
-else:
-    assert False, "You choose the wrong Classifier"
+dt = DecisionTreeClassifier(max_depth= args.max_depth, criterion=kldc)
 
 
-if args.ptz_only:
-    X_train = np.reshape(X_train, (-1,1))
-    X_test = np.reshape(X_test, (-1,1))
-
-
-bdt = AdaBoostClassifier(dt, algorithm = args.boost_algorithm, n_estimators=args.n_est)
+# Create and fit an AdaBoosted decision tree
+bdt = AdaBoostClassifier(dt, algorithm= args.boost_algorithm,n_estimators= args.est_num)
 bdt.fit(X_train, y_train, w_train)
-ende_training = time.time()
 
+test_decision_function = bdt.decision_function(X_test)
+train_decision_function = bdt.decision_function(X_train)
+
+ende_training = time.time()
 logger.info('Time to train the tree ' +  '{:5.3f}s'.format(ende_training-start))
 
 
@@ -154,22 +132,6 @@ output_dir = os.path.join(tmp_directory, args.data_version)
 if not os.path.exists(output_dir):
     os.makedirs( output_dir)
 
-#save the data to file
-if args.save:
-    logger.info("Save the trained plot to %s, it uses the %s criterion", output_dir, args.criterion)
-    joblib.dump(bdt,  os.path.join(output_dir,"bdt-trainingdata-" + version)) 
-    logger.info("Dumped the tree to %s",  os.path.join(output_dir,"bdt-trainingdata-" + version))
-
-#export the tree TODO! NOT WORKING!!
-if args.export:
-    export_graphviz(bdt, out_file= os.path.join(output_dir, version + "-tree.dot"))
-    logger.info("Exported the tree as .dot to %s", os.path.join(output_dir, version + "-tree.dot")) 
-
-
-
-#end if no_plot argument was choosen
-if args.no_plot:
-    raise SystemExit
 
 #get the output directory for plots
 output_directory = os.path.join(plot_directory,'Kullback-Leibler-Plots',  argParser.prog.split('.')[0], vversion)
@@ -177,142 +139,6 @@ if not os.path.exists(output_directory):
     os.makedirs(output_directory)
 logger.info('Save to %s directory', output_directory)
 
-#pyplot settings
-class_names = ["SM Test", "BSM Test" , "SM Train", "BSM Train"]
-plot_colors = ["#000cff","#ff0000", "#9ba0ff" , "#ff8d8d"]
-plt.figure(figsize=(18,8)).suptitle("Decision Boundaries for test- (top) and trainings-dataset (bottom) \n n: " + str(args.n_est), fontsize=18)
-plot_step = 0.075
-#plot_range = (min(min(train_scores), min(test_scores), max(max(train_scores), max(test_scores))))
-##show the performance plot
-#plt.subplot(2,2,1)
-#plt.plot(parameters, train_scores, label='Train')
-#plt.plot(parameters, test_scores, label='Test')
-#plt.vlines(para_optim, plt.ylim()[0], np.max(test_scores), color='k',
-#           linewidth=3, label='Optimum on test')
-#plt.legend(loc='lower left')
-#plt.ylim(plot_range)
-#plt.xlabel('Regularization parameter')
-#plt.ylabel('Performance')
-
-##Plot the decision diagram
-#plt.subplot(2,2,2)
-
-#is used by the histogramms later
-test_decision_function = bdt.decision_function(X_test)
-train_decision_function = bdt.decision_function(X_train)
-#plot_range = (test_decision_function.min(), test_decision_function.max())
-#
-#for i, n, c in zip(range(4), class_names, plot_colors):
-#    if i > 1:
-#        dec_func = train_decision_function
-#        weight = w_train
-#        label = y_train
-#    else:
-#        dec_func = test_decision_function
-#        weight = w_test
-#        label = y_test
-#    plt.hist(dec_func[np.where(label == i % 2)] ,
-#             bins=10,
-#             range=plot_range,
-#             facecolor=c,
-#             weights=weight[np.where(label == i % 2)],
-#             label='Class %s' %  n,
-#             alpha=.5,
-#             edgecolor='k')
-#    x1, x2, y1, y2 = plt.axis()
-#    plt.axis((x1, x2, y1, y2 * 1.2))
-#    plt.legend(loc='upper right')
-#    plt.ylabel('Samples')
-#    plt.xlabel('Score' )
-#    plt.title('Decision Scores')
-#
-##Plot the decision boundaries and generate the decision data for test data
-plt.subplot(2,1,1)
-if args.ptz_only:
-    x_min, x_max = X_test.min() - 1, X_test.max() + 1
-    xx = np.arange(x_min, x_max, plot_step)
-    xx = np.reshape(xx, (-1,1))
-    Z = bdt.decision_function(xx)
-    Z = np.reshape(Z, (-1,1))
-    y_min, y_max = Z.min() - 1, Z.max() + 1
-    plt.plot(xx, Z) 
-else:
-    x_min, x_max = X_test[:, 0].min() - 1, X_test[:, 0].max() + 1
-    y_min, y_max = X_test[:, 1].min() - 0.1 , X_test[:, 1].max() + 0.1
-    xx, yy = np.meshgrid(np.arange(x_min, x_max, plot_step),
-                     np.arange(y_min, y_max, plot_step))
-    Z = bdt.decision_function(np.c_[xx.ravel(), yy.ravel()]) #use bdt.predict for no
-
-    #fill the plot with gradient color
-    Z = Z.reshape(xx.shape)
-    plt.pcolormesh(xx,yy,Z, cmap=plt.cm.coolwarm)
-    cs = plt.contourf(xx, yy, Z, cmap=plt.cm.coolwarm) #plt.contour(.., linewidth=0.
-plt.axis("tight")
-
-##Plot the training points
-#for i, n, c in zip(range(2), class_names[:2], plot_colors[:2]):
-#    idx = np.where(y_test == i) #to filter weights: np.intersect1d(np.where(y == i), 
-#    plt.scatter(X_test[idx, 0], X_test[idx, 1],
-#                c=c, cmap=plt.cm.coolwarm,
-#                s=20, edgecolor='k',
-#                label="Class %s" % n,
-#                marker=".")
-plt.xlim(x_min, x_max)
-plt.ylim(y_min, y_max)
-plt.legend(loc='upper right')
-if args.ptz_only:
-    plt.xlabel("p_T(Z) GeV")
-    plt.ylabel("Decision Function")
-else:
-    plt.xlabel('p_T(Z) (GeV)')
-    plt.ylabel('Cos(Theta*)')
-
-
-#Plot the decision boundaries and generate the decision data for training data
-plt.subplot(2,1,2)
-if args.ptz_only:
-    x_min, x_max = X_train.min() - 1, X_test.max() + 1
-    xx = np.arange(x_min, x_max, plot_step)
-    xx = np.reshape(xx,(-1,1))
-    Z = bdt.decision_function(xx)
-    Z = np.reshape(Z, (-1,1))
-    y_min, y_max = Z.min() - 1, Z.max() + 1
-    plt.plot(xx, Z) 
-else:
-    x_min, x_max = X_train[:, 0].min() - 1, X_train[:, 0].max() + 1
-    y_min, y_max = X_train[:, 1].min() - 0.1, X_train[:, 1].max() + 0.1
-    xx, yy = np.meshgrid(np.arange(x_min, x_max, plot_step),
-                     np.arange(y_min, y_max, plot_step))
-    Z = bdt.decision_function(np.c_[xx.ravel(), yy.ravel()]) #use bdt.predict for no
-
-#fill the plot with gradient color
-    Z = Z.reshape(xx.shape)
-    plt.pcolormesh(xx,yy,Z, cmap=plt.cm.coolwarm)
-    cs = plt.contourf(xx, yy, Z, cmap=plt.cm.coolwarm) #plt.contour(.., linewidth=0.
-plt.axis("tight")
-
-##Plot the training points
-#for i, n, c in zip(range(2), class_names[:2], plot_colors[:2]):
-#    idx = np.where(y_train == i) #to filter weights: np.intersect1d(np.where(y == i), 
-#    plt.scatter(X_train[idx, 0], X_train[idx, 1],
-#                c=c, cmap=plt.cm.coolwarm,
-#                s=20, edgecolor='k',
-#                label="Class %s" % n,
-#                marker=".")
-plt.xlim(x_min, x_max)
-plt.ylim(y_min, y_max)
-plt.legend(loc='upper right')
-if args.ptz_only:
-    plt.xlabel("p_T(Z) GeV")
-    plt.ylabel("Decision Function")
-else:
-    plt.xlabel('p_T(T) (GeV)')
-    plt.ylabel('Cos(Theta*)')
-
-
-number = '%03d' % args.n_est
-#save the matlib plot
-plt.savefig(os.path.join( output_directory, args.criterion ,number + '.png'))
 
 #setup the historgramms
 h_dis_train_SM = ROOT.TH1D("dis_train_sm", "Discriminator", 12, -1, 1)
@@ -405,11 +231,42 @@ h_dis_train_BSM.Scale(1/w_train_sum_bsm)
 h_dis_test_SM.Scale(1/w_test_sum_sm)
 h_dis_test_BSM.Scale(1/w_test_sum_bsm)
 
-#Berechne die Kule Div
+#pyplot settings
+class_names = ["Kule", "Gini"]
+plot_colors = ["#000cff","#ff0000"]
+plt.figure(figsize=(12,12))
+plt.title("Cut")
+
+#initialice the Gini and Entropy classes
 kl = KullbackLeibler(logger)
-kule_test, error_test = kl.kule_div(h_dis_test_SM, h_dis_test_BSM)
-kule_train, error_train = kl.kule_div(h_dis_train_SM, h_dis_train_BSM)
-logger.info('Kullback-Leibler Divergenz:\nTraining: %f and error: %f \nTesting: %f and error: %f',kule_train,error_train, kule_test, error_test)
+gi = Gini(logger)
+
+#Generate the X values
+X_disc = range(0,h_dis_test_SM.GetNbinsX())
+kule_values = []
+gini_values = []
+
+#Fill the kule and gini values
+for x in X_disc:
+    kule_test, k_error_test = kl.kule_div(h_dis_test_SM, h_dis_test_BSM, x)
+    gini_test, g_error_test = gi.gini(h_dis_test_SM, h_dis_test_BSM, x)
+    kule_values.append(kule_test)
+    gini_values.append(gini_test)
+    
+plot_range = (min(min(kule_values), min(gini_values), max(max(kule_values), max(gini_values))))
+
+#show the cut plot
+plt.plot(X_disc, kule_values, label='Kule')
+plt.plot(X_disc, gini_values, label='Gini')
+plt.legend(loc='upper right')
+plt.ylim(plot_range)
+plt.xlim((0,h_dis_train_SM.GetNbinsX() +1))
+plt.xlabel('Cut value')
+plt.ylabel('Criterions')
+plt.axis("tight")
+
+#save the matlib plot
+plt.savefig(os.path.join( output_directory, 'cut' + version + '.png'))
 
 #Plot the diagramms
 c = ROOT.TCanvas("Discriminator", "", 2880, 1620)
@@ -435,8 +292,6 @@ leg.AddEntry(h_dis_train_SM,"SM Training")
 leg.AddEntry(h_dis_train_BSM,"BSM Training")
 leg.AddEntry(h_dis_test_SM,"SM Testing")
 leg.AddEntry(h_dis_test_BSM,"BSM Testing")
-leg.AddEntry(0, "Kul.div. test: " + str(kule_test) + " train: " + str(kule_train), "")
-leg.AddEntry(0, "Kul.div. error  test: " + str(error_test) + " train: " + str(error_train), "")
 
 leg.Draw()
 

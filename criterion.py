@@ -6,11 +6,12 @@ class KullbackLeibler:
     def __init__(self, logger):
         self.logger = logger
     
-    def kule_div(self, sm, bsm):
+    def kule_div(self, sm, bsm, start_index_offset = 0):
         assert sm.GetNbinsX() == bsm.GetNbinsX(), "Different Bin counts, in criterion.py"
+        assert start_index_offset < sm.GetNbinsX(), "The offsetvalue is too big"
         kule = 0
         varianz = 0
-        for i in range(1,bsm.GetNbinsX()+1):
+        for i in range(1 + start_index_offset,bsm.GetNbinsX()+1):
             p = bsm.GetBinContent(i)
             q = sm.GetBinContent(i)
             w_bsm = bsm.GetBinError(i)
@@ -30,11 +31,12 @@ class KullbackLeibler:
 class Gini:
     def __init__(self, logger):
         self.logger = logger
-    def gini(self, sm, bsm):
+    def gini(self, sm, bsm, start_index_offset=0):
         assert sm.GetNbinsX() == bsm.GetNbinsX(), "Different Bin counts, in criterion.py"
+        assert start_index_offset < sm.GetNbinsX()
         gini = 0
         varianz = 0
-        for i in range(1,bsm.GetNbinsX()+1):
+        for i in range(1 + start_index_offset,bsm.GetNbinsX()+1):
             p = bsm.GetBinContent(i)
             q = sm.GetBinContent(i)
             w_bsm = bsm.GetBinError(i)

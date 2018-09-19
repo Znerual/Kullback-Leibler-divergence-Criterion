@@ -18,7 +18,7 @@ from sklearn.model_selection import train_test_split
 # TTXPheno
 from TTXPheno.Tools.user import plot_directory, tmp_directory
 
-#Kullback Leibner Divergenz
+#Kullback Leibler Divergenz
 from criterion import KullbackLeibler
 
 #start the timer
@@ -50,8 +50,8 @@ import RootTools.core.logger as Logger
 logger = Logger.get_logger(args.logLevel, logFile = None)
 
 #Kule algorithm
-from kullback_leibner_divergence_criterion import KullbackLeibnerCriterion
-kldc = KullbackLeibnerCriterion(1, np.array([2], dtype='int64'))
+from kullback_leibler_divergence_criterion import KullbackLeiblerCriterion
+kldc = KullbackLeiblerCriterion(1, np.array([2], dtype='int64'))
 
 #setting up the file save name
 version = vversion

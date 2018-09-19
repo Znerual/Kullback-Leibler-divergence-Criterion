@@ -74,32 +74,41 @@ version += '_maxDepth' + str(args.max_depth) + '_estStart' + str( args.n_est_sta
 
 def plot(epoch, test, train, error_test, error_train, choice):
     class_names = ["Gini", "Kule" , "Entropy"]
-    plot_colors = ["#000cff","#ff0000", "#9ba0ff" , "#ff8d8d"]
-    plt.figure(figsize=(12,12))
-    plot_step = 0.25
+    plot_colors = [["#000cff","#ff0000"], ["#2ba0ff", "#fa80ff"], ["#40f3ff", "#f100ff"]]
+    plt.figure(figsize=(18,18))
+    plot_step = 0.05
     #pyplot settings
-    if choice == 'test':
-        for n in class_names:
-            plt.plot(epoch, test[n](0),'b', label='Trained with ' + n + ' gini index')  #0 is the gini 
-            plt.plot(epoch, test[n](1),'r', label='Trained with ' + n + 'kullback-leibler divergence')  #1 is the kule div
-    elif choice == 'train':
-        for n in class_names:
-            plt.plot(epoch, train[n](0),'b', label='Trained with ' + n + ' gini index')  #0 is the gini 
-            plt.plot(epoch, train[n](1),'r', label='Trained with ' + n + 'kullback-leibler divergence')  #1 is the kule div
-    elif choice == 'error_test':
-        for n in class_names:
-            plt.plot(epoch, error_test[n](0),'b', label='Trained with ' + n + ' gini index')  #0 is the gini 
-            plt.plot(epoch, error_test[n](1),'r', label='Trained with ' + n + 'kullback-leibler divergence')  #1 is the kule div
-    
-    elif choice == 'error_train':
-        for n in class_names:
-            plt.plot(epoch, error_train[n](0),'b', label='Trained with ' + n + ' gini index')  #0 is the gini 
-            plt.plot(epoch, error_train[n](1),'r', label='Trained with ' + n + 'kullback-leibler divergence')  #1 is the kule div
-
-    else:
-        return
-    plt.legend(loc='lower left')
+    for n,c  in zip(class_names, plot_colors):
+        if choice == 'test':
+            plt.plot(epoch, [i[0] for i in test[n]],c[0], label='Trained with ' + n + ' gini index')  #0 is the gini 
+            plt.plot(epoch, [i[1] for i in test[n]],c[1], label='Trained with ' + n + 'kullback-leibler divergence')  #1 is the kule div
+            yrange_min = min(np.array([i[0] for i in test[n]]).min(), np.array([i[1] for i in test[n]]).min())
+            yrange_max = max(np.array([i[0] for i in test[n]]).max(), np.array([i[1] for i in test[n]]).max())
+            plt.ylim(yrange_min, yrange_max)
+        elif choice == 'train':
+            plt.plot(epoch, [i[0] for i in train[n]],c[0], label='Trained with ' + n + ' gini index')  #0 is the gini 
+            plt.plot(epoch, [i[1] for i in train[n]],c[1], label='Trained with ' + n + 'kullback-leibler divergence')  #1 is the kule div
+            yrange_min = min(np.array([i[0] for i in train[n]]).min(), np.array([i[1] for i in train[n]]).min())
+            yrange_max = max(np.array([i[0] for i in train[n]]).max(), np.array([i[1] for i in train[n]]).max())
+            plt.ylim(yrange_min, yrange_max)
+        elif choice == 'error_test':
+            yrange_min = min(np.array([i[0] for i in error_test[n]]).min(), np.array([i[1] for i in error_test[n]]).min())
+            yrange_max = max(np.array([i[0] for i in error_test[n]]).max(), np.array([i[1] for i in error_test[n]]).max())
+            plt.ylim(yrange_min, yrange_max)
+            plt.plot(epoch, [i[0] for i in error_test[n]],c[0], label='Trained with ' + n + ' gini index')  #0 is the gini 
+            plt.plot(epoch, [i[1] for i in error_test[n]],c[1], label='Trained with ' + n + 'kullback-leibler divergence')  #1 is the kule div 
+        elif choice == 'error_train':
+            plt.plot(epoch, [i[0] for i in error_train[n]],c[0], label='Trained with ' + n + ' gini index')  #0 is the gini 
+            plt.plot(epoch, [i[1] for i in error_train[n]],c[1], label='Trained with ' + n + 'kullback-leibler divergence')  #1 is the kule div
+            yrange_min = min(np.array([i[0] for i in error_train[n]]).min(), np.array([i[1] for i in error_train[n]]).min())
+            yrange_max = max(np.array([i[0] for i in error_train[n]]).max(), np.array([i[1] for i in error_train[n]]).max())
+            plt.ylim(yrange_min, yrange_max)
+        else:
+            return
+    plt.legend(loc='right')
    # plt.ylim(plot_range)
+    plt.xlim((epoch.min(),epoch.max()))
+    
     plt.xlabel('Epoch')
     plt.ylabel('Criterion')
 
@@ -277,7 +286,7 @@ for crit, name in zip(criterion_list, name_list):
             train[name] = [(gini_train, kule_train)]
             error_test[name] = [(g_error_test, k_error_test)]
             error_train[name] = [(g_error_train, k_error_train)]
-    logger.info('Kullback-Leibler Divergenz:\nTraining: %f and error: %f \nTesting: %f and error: %f',kule_train,error_train, kule_test, error_test)
+        logger.info("Training %s with parameter %i, gettting a kule of (test:%f|train:%f and a gini of (test:%f|train:%f) with a error of kule test: %f, kule train: %f, gini test: %f, gini train: %f", name, para, kule_test, kule_train, gini_test, gini_train,k_error_test, k_error_train, g_error_test, g_error_train)
     
 #stop the time to train the tree
 ende_training = time.time()
@@ -294,7 +303,7 @@ logger.info('Save to %s directory', output_directory)
 
 #end if no_plot argument was choosen
 if not args.no_plot:
-    plot()
+    plot(parameters, test, train, error_test, error_train, 'test')
 
 
 #stop the timer
