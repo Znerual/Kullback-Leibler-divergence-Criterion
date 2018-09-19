@@ -2,5 +2,7 @@
 *.c
 *.so
 *.pyc
+*.swp
+*.swo
 /build
 /ttz_data

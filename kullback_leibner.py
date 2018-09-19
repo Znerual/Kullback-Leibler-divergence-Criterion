@@ -24,7 +24,7 @@ class KullbackLeibner:
                     except ZeroDivisionError:                    
                         self.logger.warning("Divided by zero np.log(%f/%f), at bin %i with bin SM Error %f and BSM error %f", p,q, i, w_sm, w_bsm) 
                     except FloatingPointError:
-                        self.logger.warning("Floating Point Error np.log(%f/%f) at bin %i with error bins SM: %f and BSM: %f", p,q, i, w_sm, s_bsm) 
+                        self.logger.warning("Floating Point Error np.log(%f/%f) at bin %i with error bins SM: %f and BSM: %f", p,q, i, w_sm, w_bsm) 
                      
         return kule, np.sqrt(varianz)#return std (wurzel)
 
