@@ -1,11 +1,11 @@
-# Kullback-Leibner-divergence-Criterion
+# Kullback-Leibler-divergence-Criterion
 
 WORK-IN-PROGRESS!
 
 The goal of this project is to offer a criterion for SciKit-Learn, which enables hypothesis testing optimised for discovery.
-To reach this goal, I implement the Kullback-Leibner divergence criterion.
+To reach this goal, I implement the Kullback-Leibler divergence criterion.
 
-# Build
+# Build (to get the Criterion)
 
 The files are written and tested with Python 2.7 and Cython!
 
