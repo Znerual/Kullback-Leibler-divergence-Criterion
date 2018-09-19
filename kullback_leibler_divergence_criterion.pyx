@@ -18,6 +18,7 @@ from libc.math cimport abs
 
 cdef bint DEBUG = False
 cdef bint DEBUG_proxy = False
+cdef int MIN_NODE_SAMPLES = 30
 choice = 'kule'
 
 cdef class KullbackLeiblerCriterion(ClassificationCriterion):
@@ -163,6 +164,7 @@ cdef class KullbackLeiblerCriterion(ClassificationCriterion):
 
             # kule
             rho_left = sum_left[1]/self.weighted_n_left
+            
             if DEBUG: rho_0_left = sum_left[0]/self.weighted_n_left # for debugging
             if rho_left == 1:
                 kule_left = -INFINITY
@@ -189,7 +191,10 @@ cdef class KullbackLeiblerCriterion(ClassificationCriterion):
                 #kule_right = 1.0 - (rho_0_right**2 + rho_right**2) 
             else:
                 kule_right = 0.
-            
+            #stop splitting if too few samples left in node
+            if self.n_node_samples < MIN_NODE_SAMPLES:
+                kule_right = -INFINITY
+                kule_left = -INFINITY 
             if DEBUG:
                 # for debugging: compute the mother impurity
                 rho  = (sum_left[1] + sum_right[1])/(self.weighted_n_left + self.weighted_n_right)

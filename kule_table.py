@@ -19,7 +19,7 @@ from sklearn.model_selection import train_test_split
 from TTXPheno.Tools.user import plot_directory, tmp_directory
 
 #Kullback Leibner Divergenz
-from kullback_leibner import KullbackLeibner
+from criterion import KullbackLeibler
 
 #start the timer
 start = time.time()
@@ -125,7 +125,7 @@ if args.no_plot:
     raise SystemExit
 
 #get the output directory for plots
-output_directory = os.path.join(plot_directory,'Kullback-Leibner-Plots',  argParser.prog.split('.')[0], vversion)
+output_directory = os.path.join(plot_directory,'Kullback-Leibler-Plots',  argParser.prog.split('.')[0], vversion)
 if not os.path.exists(output_directory):
     os.makedirs(output_directory)
 logger.info('Save to %s directory', output_directory)
@@ -216,7 +216,7 @@ entropy_h_dis_test_SM.Scale(1/entropy_w_test_sum_sm)
 entropy_h_dis_test_BSM.Scale(1/entropy_w_test_sum_bsm)
 dataTrain = []
 #Berechne die Kule Div
-kl = KullbackLeibner(logger)
+kl = KullbackLeibler(logger)
 kule_test, error_test = kl.kule_div(kule_h_dis_test_SM, kule_h_dis_test_BSM)
 kule_train, error_train = kl.kule_div(kule_h_dis_train_SM, kule_h_dis_train_BSM)
 inv_kule_test, inv_error_test = kl.kule_div(kule_h_dis_test_BSM, kule_h_dis_test_SM)
@@ -241,7 +241,7 @@ dataTrain.append(("Entropy Test", kule_test,error_test, inv_kule_test, inv_error
     
 
 
-klabel = "Kullback Leibner"
+klabel = "Kullback Leibler"
 if args.swap_hypothesis:
     klabel += " Labels changed"
 labels = ["Name", klabel, "Error", klabel + " Inverted", "Error"]

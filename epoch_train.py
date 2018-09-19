@@ -37,9 +37,7 @@ argParser.add_argument('--criterion', action='store', default='kule', nargs='?',
 argParser.add_argument('--export', action='store_true', help="Export the trainded tree as graphviz dot")
 argParser.add_argument('--no_plot', action='store_true', help="Don't generate a plot")
 argParser.add_argument('--max_depth', action='store', default=2, type=int,nargs='?',  help="The max depth argument, which is given to the DecisionTreeClassifier")
-argParser.add_argument('--n_est_start', action='store', default=100, type=int,nargs='?',  help="The n_estimators argument, which is given to the AdaBoostClassifier over an interval from n_est_start to n_est_end")
-argParser.add_argument('--n_est_end', action='store', default=2000, type=int,nargs='?',  help="The n_estimators argument, which is given to the AdaBoostClassifier")
-argParser.add_argument('--est_num', action='store', default=40, type=int,nargs='?',  help="The number of steps between the start and end of n_estimators")
+argParser.add_argument('--n_est', action='store', default=100, type=int,nargs='?',  help="The n_estimators argument, which is given to the AdaBoostClassifier")
 argParser.add_argument('--boost_algorithm', action='store', default='SAMME', nargs='?', choices=['SAMME', 'SAMME.R'], help="Choose a boosting algorithm for the AdaBoostClassifier")
 argParser.add_argument('--swap_hypothesis', action='store_true', help="Chance the Target Labels of SM and BSM Hypothesis")
 argParser.add_argument('--random_state', action='store', default=0, type=int,nargs='?',  help="The random state, which is given to the train_test_split method")
@@ -48,7 +46,7 @@ argParser.add_argument('--ptz_only', action='store_true', help='Only use the pTZ
 args = argParser.parse_args()
 
 #Set the version of the script
-vversion = 'v12'
+vversion = 'v1'
 
 #set criterion, you can choose from (gini, kule, entropy, hellinger)
 
@@ -72,7 +70,7 @@ if args.swap_hypothesis:
     version += '_swap'
 if args.ptz_only:
     version +='_ptconly'
-version += '_maxDepth' + str(args.max_depth) + '_estStart' + str( args.n_est_start) + '_estEnd' + str(args.n_est_end) + '_EstNum' + str(args.est_num) + '_BoostAlg'  + str(args.boost_algorithm) + '_RandState' + str(args.random_state)
+version += '_maxDepth' + str(args.max_depth) +  '_n_est' + str(args.n_est) + '_BoostAlg'  + str(args.boost_algorithm) + '_RandState' + str(args.random_state)
 
 #find directory
 input_directory = os.path.join(tmp_directory, args.data_version)
@@ -138,31 +136,15 @@ elif args.criterion == 'entropy':
 else:
     assert False, "You choose the wrong Classifier"
 
-parameters = np.linspace(args.n_est_start, args.n_est_end, num=args.est_num, dtype=np.int32) 
-train_scores = []
-test_scores = []
 
 if args.ptz_only:
     X_train = np.reshape(X_train, (-1,1))
     X_test = np.reshape(X_test, (-1,1))
-for para in parameters:
-    # Create and fit an AdaBoosted decision tree
-    bdt = AdaBoostClassifier(dt, algorithm= args.boost_algorithm,n_estimators= para)
-    bdt.fit(X_train, y_train, w_train)
-    train_score = bdt.score(X_train, y_train, w_train)
-    test_score = bdt.score(X_test, y_test, w_test)
-    train_scores.append(train_score)
-    test_scores.append(test_score)
-    logger.info("Parameter: %i, Train-Score: %f, Test-Score: %f", para, train_score, test_score)
 
-i_para_optimal = np.argmax(test_scores)
-para_optim = parameters[i_para_optimal]
-logger.info("The optimal Parameter was: %i", para_optim)
-#stop the time to train the tree
-ende_training = time.time()
 
-bdt = AdaBoostClassifier(dt, algorithm = args.boost_algorithm, n_estimators=para_optim)
+bdt = AdaBoostClassifier(dt, algorithm = args.boost_algorithm, n_estimators=args.n_est)
 bdt.fit(X_train, y_train, w_train)
+ende_training = time.time()
 
 logger.info('Time to train the tree ' +  '{:5.3f}s'.format(ende_training-start))
 
@@ -198,52 +180,54 @@ logger.info('Save to %s directory', output_directory)
 #pyplot settings
 class_names = ["SM Test", "BSM Test" , "SM Train", "BSM Train"]
 plot_colors = ["#000cff","#ff0000", "#9ba0ff" , "#ff8d8d"]
-plt.figure(figsize=(12,12))
-plot_step = 0.25
-plot_range = (min(min(train_scores), min(test_scores), max(max(train_scores), max(test_scores))))
-#show the performance plot
-plt.subplot(2,2,1)
-plt.plot(parameters, train_scores, label='Train')
-plt.plot(parameters, test_scores, label='Test')
-plt.vlines(para_optim, plt.ylim()[0], np.max(test_scores), color='k',
-           linewidth=3, label='Optimum on test')
-plt.legend(loc='lower left')
-plt.ylim(plot_range)
-plt.xlabel('Regularization parameter')
-plt.ylabel('Performance')
+plt.figure(figsize=(20,8)).suptitle("Decision Boundaries for test- (top) and trainings-dataset (bottom)", fontsize=18)
+plot_step = 0.075
+#plot_range = (min(min(train_scores), min(test_scores), max(max(train_scores), max(test_scores))))
+##show the performance plot
+#plt.subplot(2,2,1)
+#plt.plot(parameters, train_scores, label='Train')
+#plt.plot(parameters, test_scores, label='Test')
+#plt.vlines(para_optim, plt.ylim()[0], np.max(test_scores), color='k',
+#           linewidth=3, label='Optimum on test')
+#plt.legend(loc='lower left')
+#plt.ylim(plot_range)
+#plt.xlabel('Regularization parameter')
+#plt.ylabel('Performance')
 
-#Plot the decision diagram
-plt.subplot(2,2,2)
+##Plot the decision diagram
+#plt.subplot(2,2,2)
+
+#is used by the histogramms later
 test_decision_function = bdt.decision_function(X_test)
 train_decision_function = bdt.decision_function(X_train)
-plot_range = (test_decision_function.min(), test_decision_function.max())
-
-for i, n, c in zip(range(4), class_names, plot_colors):
-    if i > 1:
-        dec_func = train_decision_function
-        weight = w_train
-        label = y_train
-    else:
-        dec_func = test_decision_function
-        weight = w_test
-        label = y_test
-    plt.hist(dec_func[np.where(label == i % 2)] ,
-             bins=10,
-             range=plot_range,
-             facecolor=c,
-             weights=weight[np.where(label == i % 2)],
-             label='Class %s' %  n,
-             alpha=.5,
-             edgecolor='k')
-    x1, x2, y1, y2 = plt.axis()
-    plt.axis((x1, x2, y1, y2 * 1.2))
-    plt.legend(loc='upper right')
-    plt.ylabel('Samples')
-    plt.xlabel('Score' )
-    plt.title('Decision Scores')
-
-#Plot the decision boundaries and generate the decision data for test data
-plt.subplot(2,2,3)
+#plot_range = (test_decision_function.min(), test_decision_function.max())
+#
+#for i, n, c in zip(range(4), class_names, plot_colors):
+#    if i > 1:
+#        dec_func = train_decision_function
+#        weight = w_train
+#        label = y_train
+#    else:
+#        dec_func = test_decision_function
+#        weight = w_test
+#        label = y_test
+#    plt.hist(dec_func[np.where(label == i % 2)] ,
+#             bins=10,
+#             range=plot_range,
+#             facecolor=c,
+#             weights=weight[np.where(label == i % 2)],
+#             label='Class %s' %  n,
+#             alpha=.5,
+#             edgecolor='k')
+#    x1, x2, y1, y2 = plt.axis()
+#    plt.axis((x1, x2, y1, y2 * 1.2))
+#    plt.legend(loc='upper right')
+#    plt.ylabel('Samples')
+#    plt.xlabel('Score' )
+#    plt.title('Decision Scores')
+#
+##Plot the decision boundaries and generate the decision data for test data
+plt.subplot(2,1,1)
 if args.ptz_only:
     x_min, x_max = X_test.min() - 1, X_test.max() + 1
     xx = np.arange(x_min, x_max, plot_step)
@@ -254,7 +238,7 @@ if args.ptz_only:
     plt.plot(xx, Z) 
 else:
     x_min, x_max = X_test[:, 0].min() - 1, X_test[:, 0].max() + 1
-    y_min, y_max = X_test[:, 1].min() - 1, X_test[:, 1].max() + 1
+    y_min, y_max = X_test[:, 1].min() - 0.1 , X_test[:, 1].max() + 0.1
     xx, yy = np.meshgrid(np.arange(x_min, x_max, plot_step),
                      np.arange(y_min, y_max, plot_step))
     Z = bdt.decision_function(np.c_[xx.ravel(), yy.ravel()]) #use bdt.predict for no
@@ -280,12 +264,12 @@ if args.ptz_only:
     plt.xlabel("p_T(Z) GeV")
     plt.ylabel("Decision Function")
 else:
-    plt.xlabel('p_T(Z) (GeV) \n for Test Data')
+    plt.xlabel('p_T(Z) (GeV)')
     plt.ylabel('Cos(Theta*)')
-plt.title('Decision Boundary')
+
 
 #Plot the decision boundaries and generate the decision data for training data
-plt.subplot(2,2,4)
+plt.subplot(2,1,2)
 if args.ptz_only:
     x_min, x_max = X_train.min() - 1, X_test.max() + 1
     xx = np.arange(x_min, x_max, plot_step)
@@ -296,7 +280,7 @@ if args.ptz_only:
     plt.plot(xx, Z) 
 else:
     x_min, x_max = X_train[:, 0].min() - 1, X_train[:, 0].max() + 1
-    y_min, y_max = X_train[:, 1].min() - 1, X_train[:, 1].max() + 1
+    y_min, y_max = X_train[:, 1].min() - 0.1, X_train[:, 1].max() + 0.1
     xx, yy = np.meshgrid(np.arange(x_min, x_max, plot_step),
                      np.arange(y_min, y_max, plot_step))
     Z = bdt.decision_function(np.c_[xx.ravel(), yy.ravel()]) #use bdt.predict for no
@@ -322,9 +306,8 @@ if args.ptz_only:
     plt.xlabel("p_T(Z) GeV")
     plt.ylabel("Decision Function")
 else:
-    plt.xlabel('p_T(T) (GeV) \n for Trainings Data')
+    plt.xlabel('p_T(T) (GeV)')
     plt.ylabel('Cos(Theta*)')
-plt.title('Decision Boundary')
 
 
 #save the matlib plot
