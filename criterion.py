@@ -20,7 +20,7 @@ class KullbackLeibler:
                 with np.errstate(divide='raise'):
                     try:
                         lg = np.log(p/q)
-                        kule += p * lg
+                        kule += 4.0 * p * lg
                         varianz += np.square(w_bsm) * (np.square(1.0 + lg)) + np.square(p * w_sm/ q) #nicht error nennen, varianz
                     except ZeroDivisionError:                    
                         self.logger.warning("Divided by zero np.log(%f/%f), at bin %i with bin SM Error %f and BSM error %f", p,q, i, w_sm, w_bsm) 

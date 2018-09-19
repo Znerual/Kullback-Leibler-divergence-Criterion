@@ -71,7 +71,7 @@ cdef class KullbackLeiblerCriterion(ClassificationCriterion):
             #    kule = 0
             elif rho>0:
                 #kule  = -rho*log(rho/(1-rho))
-                kule  = 0.5*rho - 0.25*rho*log(rho/(1-rho))
+                kule  = 2.0*rho - rho*log(rho/(1-rho))
                 #kule = 1.0 - (rho_0**2 + rho**2)
             else:
                 kule = 0
@@ -173,7 +173,7 @@ cdef class KullbackLeiblerCriterion(ClassificationCriterion):
             #    kule_left = 0
             elif rho_left > 0:
                 #kule_left = -rho_left*log(rho_left/(1-rho_left))
-                kule_left = 0.5*rho_left - 0.25*rho_left*log(rho_left/(1-rho_left))
+                kule_left = 2.0*rho_left - rho_left*log(rho_left/(1-rho_left))
                 #kule_left = 1.0-(rho_0_left**2 + rho_left**2)
             else:
                 kule_left = 0.
@@ -187,7 +187,7 @@ cdef class KullbackLeiblerCriterion(ClassificationCriterion):
             #    kule_right = 0
             elif rho_right > 0:
                 #kule_right = -rho_right*log(rho_right/(1-rho_right))
-                kule_right = 0.5*rho_right - 0.25*rho_right*log(rho_right/(1-rho_right))
+                kule_right = 2.0*rho_right - rho_right*log(rho_right/(1-rho_right))
                 #kule_right = 1.0 - (rho_0_right**2 + rho_right**2) 
             else:
                 kule_right = 0.
@@ -201,7 +201,7 @@ cdef class KullbackLeiblerCriterion(ClassificationCriterion):
                 if rho == 1:
                     kule = - INFINITY
                 elif rho > 0:
-                    kule = 0.5*rho - 0.25*rho*log(rho/(1-rho))
+                    kule = 2.0*rho - rho*log(rho/(1-rho))
                 else:
                     kule = 0.
 

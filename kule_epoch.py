@@ -74,20 +74,20 @@ version += '_maxDepth' + str(args.max_depth) + '_estStart' + str( args.n_est_sta
 
 def plot(epoch, test, train, error_test, error_train, choice):
     class_names = ["Gini", "Kule" , "Entropy"]
-    plot_colors = [["#000cff","#ff0000"], ["#2ba0ff", "#fa80ff"], ["#40f3ff", "#f100ff"]]
+    plot_colors = [["#000cff","#ff0f00"], ["#49a0ff", "#fa80ff"], ["#8ff3ff", "#f00000"]]
     plt.figure(figsize=(18,18))
     plot_step = 0.05
     #pyplot settings
     for n,c  in zip(class_names, plot_colors):
         if choice == 'test':
-            plt.plot(epoch, [i[0] for i in test[n]],c[0], label='Trained with ' + n + ' gini index')  #0 is the gini 
-            plt.plot(epoch, [i[1] for i in test[n]],c[1], label='Trained with ' + n + 'kullback-leibler divergence')  #1 is the kule div
+            plt.plot(epoch, [i[0] for i in test[n]],c[0],marker='o', label='Trained with ' + n + ' gini index')  #0 is the gini 
+            plt.plot(epoch, [i[1] for i in test[n]],c[1],linestyle="--",marker='o', label='Trained with ' + n + 'kullback-leibler divergence')  #1 is the kule div
             yrange_min = min(np.array([i[0] for i in test[n]]).min(), np.array([i[1] for i in test[n]]).min())
             yrange_max = max(np.array([i[0] for i in test[n]]).max(), np.array([i[1] for i in test[n]]).max())
             plt.ylim(yrange_min, yrange_max)
         elif choice == 'train':
-            plt.plot(epoch, [i[0] for i in train[n]],c[0], label='Trained with ' + n + ' gini index')  #0 is the gini 
-            plt.plot(epoch, [i[1] for i in train[n]],c[1], label='Trained with ' + n + 'kullback-leibler divergence')  #1 is the kule div
+            plt.plot(epoch, [i[0] for i in train[n]],c[0], marker='o', label='Trained with ' + n + ', gini index')  #0 is the gini 
+            plt.plot(epoch, [i[1] for i in train[n]],c[1], marker='o', linestyle="--", label='Trained with ' + n + ', kullback-leibler divergence')  #1 is the kule div
             yrange_min = min(np.array([i[0] for i in train[n]]).min(), np.array([i[1] for i in train[n]]).min())
             yrange_max = max(np.array([i[0] for i in train[n]]).max(), np.array([i[1] for i in train[n]]).max())
             plt.ylim(yrange_min, yrange_max)
@@ -95,11 +95,11 @@ def plot(epoch, test, train, error_test, error_train, choice):
             yrange_min = min(np.array([i[0] for i in error_test[n]]).min(), np.array([i[1] for i in error_test[n]]).min())
             yrange_max = max(np.array([i[0] for i in error_test[n]]).max(), np.array([i[1] for i in error_test[n]]).max())
             plt.ylim(yrange_min, yrange_max)
-            plt.plot(epoch, [i[0] for i in error_test[n]],c[0], label='Trained with ' + n + ' gini index')  #0 is the gini 
-            plt.plot(epoch, [i[1] for i in error_test[n]],c[1], label='Trained with ' + n + 'kullback-leibler divergence')  #1 is the kule div 
+            plt.plot(epoch, [i[0] for i in error_test[n]],c[0],marker='o', label='Trained with ' + n + ', gini index')  #0 is the gini 
+            plt.plot(epoch, [i[1] for i in error_test[n]],c[1],marker='o',linestyle="--", label='Trained with ' + n + ', kullback-leibler divergence')  #1 is the kule div 
         elif choice == 'error_train':
-            plt.plot(epoch, [i[0] for i in error_train[n]],c[0], label='Trained with ' + n + ' gini index')  #0 is the gini 
-            plt.plot(epoch, [i[1] for i in error_train[n]],c[1], label='Trained with ' + n + 'kullback-leibler divergence')  #1 is the kule div
+            plt.plot(epoch, [i[0] for i in error_train[n]],c[0], marker='o', label='Trained with ' + n + ' gini index')  #0 is the gini 
+            plt.plot(epoch, [i[1] for i in error_train[n]],c[1],marker='o', linestyle="--", label='Trained with ' + n + ', kullback-leibler divergence')  #1 is the kule div
             yrange_min = min(np.array([i[0] for i in error_train[n]]).min(), np.array([i[1] for i in error_train[n]]).min())
             yrange_max = max(np.array([i[0] for i in error_train[n]]).max(), np.array([i[1] for i in error_train[n]]).max())
             plt.ylim(yrange_min, yrange_max)
