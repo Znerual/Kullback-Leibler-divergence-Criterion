@@ -2,7 +2,7 @@
 import ROOT
 import numpy as np
 
-class KullbackLeibner:
+class KullbackLeibler:
     def __init__(self, logger):
         self.logger = logger
     

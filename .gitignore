@@ -6,3 +6,4 @@
 *.swo
 /build
 /ttz_data
+*.__*

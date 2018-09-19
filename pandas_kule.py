@@ -44,8 +44,8 @@ import RootTools.core.logger as Logger
 logger = Logger.get_logger(args.logLevel, logFile = None)
 
 #Kule algorithm
-from kullback_leibner_divergence_criterion import KullbackLeibnerCriterion
-kldc = KullbackLeibnerCriterion(1, np.array([2], dtype='int64'))
+from kullback_leibler_divergence_criterion import KullbackLeiblerCriterion
+kldc = KullbackLeiblerCriterion(1, np.array([2], dtype='int64'))
 
 #setting up the file save name
 version = vversion
@@ -141,7 +141,7 @@ if args.no_plot:
     raise SystemExit
 
 #get the output directory for plots
-output_directory = os.path.join(plot_directory,'Kullback-Leibner-Plots',  argParser.prog.split('.')[0], vversion)
+output_directory = os.path.join(plot_directory,'Kullback-Leibler-Plots',  argParser.prog.split('.')[0], vversion)
 if not os.path.exists(output_directory):
     os.makedirs(output_directory)
 logger.info('Save to %s directory', output_directory)

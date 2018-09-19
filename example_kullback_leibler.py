@@ -26,8 +26,8 @@ X,y,w, w_min = gauss_easy(n_samples_bsm=4000, n_samples_sm= 4000)
 
 #assert False, "End of test reached"
 
-from kullback_leibner_divergence_criterion import KullbackLeibnerCriterion
-kldc = KullbackLeibnerCriterion(1, np.array([2], dtype='int64'))
+from kullback_leibler_divergence_criterion import KullbackLeiblerCriterion
+kldc = KullbackLeiblerCriterion(1, np.array([2], dtype='int64'))
 
 #Create the tree
 #dt = DecisionTreeClassifier(max_depth=2, criterion=kldc)
@@ -105,5 +105,5 @@ plt.tight_layout()
 plt.subplots_adjust(wspace=0.35)
 
 
-plt.savefig(os.path.join( plot_directory, 'Kullback-Leibner-Plots','gauss-comparison-sym-gini.png'))
+plt.savefig(os.path.join( plot_directory, 'Kullback-Leibler-Plots','gauss-comparison-sym-gini.png'))
 #plt.show()

@@ -156,7 +156,7 @@ cosTheta_sm.style = styles.lineStyle( ROOT.kBlue)
 cosTheta_bsm.style = styles.lineStyle( ROOT.kRed)
 
 #Outputdirectory
-output_directory = os.path.join(plot_directory, 'Kullback-Leibner-Plots', argParser.prog.split('.')[0],version)
+output_directory = os.path.join(plot_directory, 'Kullback-Leibler-Plots', argParser.prog.split('.')[0],version)
 
 #draw the plots
 plot = Plot.fromHisto("ptz"+version,

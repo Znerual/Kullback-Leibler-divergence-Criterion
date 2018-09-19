@@ -18,8 +18,8 @@ from sklearn.model_selection import train_test_split
 # TTXPheno
 from TTXPheno.Tools.user import plot_directory, tmp_directory
 
-#Kullback Leibner Divergenz
-from kullback_leibner import KullbackLeibner
+#Kullback Leibler Divergenz
+from kullback_leibler import KullbackLeibler
 
 #start the timer
 start = time.time()
@@ -57,8 +57,8 @@ import RootTools.core.logger as Logger
 logger = Logger.get_logger(args.logLevel, logFile = None)
 
 #Kule algorithm
-from kullback_leibner_divergence_criterion import KullbackLeibnerCriterion
-kldc = KullbackLeibnerCriterion(1, np.array([2], dtype='int64'))
+from kullback_leibler_divergence_criterion import KullbackLeiblerCriterion
+kldc = KullbackLeiblerCriterion(1, np.array([2], dtype='int64'))
 
 #setting up the file save name
 version = vversion
@@ -190,7 +190,7 @@ if args.no_plot:
     raise SystemExit
 
 #get the output directory for plots
-output_directory = os.path.join(plot_directory,'Kullback-Leibner-Plots',  argParser.prog.split('.')[0], vversion)
+output_directory = os.path.join(plot_directory,'Kullback-Leibler-Plots',  argParser.prog.split('.')[0], vversion)
 if not os.path.exists(output_directory):
     os.makedirs(output_directory)
 logger.info('Save to %s directory', output_directory)
@@ -422,10 +422,10 @@ h_dis_test_SM.Scale(1/w_test_sum_sm)
 h_dis_test_BSM.Scale(1/w_test_sum_bsm)
 
 #Berechne die Kule Div
-kl = KullbackLeibner(logger)
+kl = KullbackLeibler(logger)
 kule_test, error_test = kl.kule_div(h_dis_test_SM, h_dis_test_BSM)
 kule_train, error_train = kl.kule_div(h_dis_train_SM, h_dis_train_BSM)
-logger.info('Kullback-Leibner Divergenz:\nTraining: %f and error: %f \nTesting: %f and error: %f',kule_train,error_train, kule_test, error_test)
+logger.info('Kullback-Leibler Divergenz:\nTraining: %f and error: %f \nTesting: %f and error: %f',kule_train,error_train, kule_test, error_test)
 
 #Plot the diagramms
 c = ROOT.TCanvas("Discriminator", "", 2880, 1620)

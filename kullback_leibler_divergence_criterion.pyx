@@ -20,7 +20,7 @@ cdef bint DEBUG = False
 cdef bint DEBUG_proxy = False
 choice = 'kule'
 
-cdef class KullbackLeibnerCriterion(ClassificationCriterion):
+cdef class KullbackLeiblerCriterion(ClassificationCriterion):
     cdef double node_impurity(self) nogil:
         
         cdef SIZE_t* n_classes = self.n_classes
@@ -37,8 +37,8 @@ cdef class KullbackLeibnerCriterion(ClassificationCriterion):
         cdef SIZE_t c
 
         with gil:
-          assert self.n_outputs == 1,    "Only one output with Kullback-Leibner Criterion"
-          assert self.n_classes[0] == 2, "Only two classes with Kullback-Leibner Criterion"
+          assert self.n_outputs == 1,    "Only one output with Kullback-Leibler Criterion"
+          assert self.n_classes[0] == 2, "Only two classes with Kullback-Leibler Criterion"
         
         for k in range(self.n_outputs):
             # Gini
@@ -126,8 +126,8 @@ cdef class KullbackLeibnerCriterion(ClassificationCriterion):
         cdef SIZE_t c
 
         with gil:
-          assert self.n_outputs == 1,    "Only one output with Kullback-Leibner Criterion"
-          assert self.n_classes[0] == 2, "Only two classes with Kullback-Leibner Criterion"
+          assert self.n_outputs == 1,    "Only one output with Kullback-Leibler Criterion"
+          assert self.n_classes[0] == 2, "Only two classes with Kullback-Leibler Criterion"
 
 
         for k in range(self.n_outputs):
