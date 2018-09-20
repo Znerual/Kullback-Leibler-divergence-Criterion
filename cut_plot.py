@@ -36,13 +36,10 @@ argParser.add_argument('--est_num', action='store', default=40, type=int,nargs='
 argParser.add_argument('--boost_algorithm', action='store', default='SAMME', nargs='?', choices=['SAMME', 'SAMME.R'], help="Choose a boosting algorithm for the AdaBoostClassifier")
 argParser.add_argument('--swap_hypothesis', action='store_true', help="Chance the Target Labels of SM and BSM Hypothesis")
 argParser.add_argument('--random_state', action='store', default=0, type=int,nargs='?',  help="The random state, which is given to the train_test_split method")
-
 args = argParser.parse_args()
 
 #Set the version of the script
 vversion = 'v1'
-
-#set criterion, you can choose from (gini, kule, entropy, hellinger)
 
 #Logger
 import RootTools.core.logger as Logger
@@ -65,7 +62,6 @@ version += '_maxDepth' + str(args.max_depth) +  '_EstNum' + str(args.est_num) + 
 input_directory = os.path.join(tmp_directory, args.data_version)
 logger.debug('Import data from %s', input_directory)
 
-
 #read data from file
 df = pd.read_hdf(os.path.join(input_directory, args.data))
 X1 = np.array(df[['genZ_pt/F','genZ_cosThetaStar/F']])
@@ -74,8 +70,7 @@ X = np.concatenate((X1,X1))
 y0 = np.zeros(len(X1))
 y1 = np.ones(len(X1))
 y = np.concatenate((y0,y1))
-    #read weights
-#normalize weights, used the mean to scale it before
+    #read weights, normalize weights, used the mean to scale it before
 w0 = np.array(df['sm_weight'])
 sm_weight_sum = np.sum(w0)
 w0 /= sm_weight_sum
@@ -87,7 +82,6 @@ if args.swap_hypothesis:
 else:
     w = np.concatenate((w0,w1))
 
-    
 logger.info('Sum of sm_weights: %f, Sum of bsm_weights: %f',sm_weight_sum, bsm_weight_sum  )
 
 #split the data into validation and trainings set
@@ -98,6 +92,8 @@ w_test_sum_sm = 0.0
 w_test_sum_bsm = 0.0
 w_train_sum_sm = 0.0
 w_train_sum_bsm = 0.0
+
+#iterating over the weights and selecting them by their label
 for i  in xrange(len(w_train)):
     if y_train[i] == 0:
         w_train_sum_sm += w_train[i]
@@ -115,30 +111,27 @@ logger.info('Yields, Training SM: %f, Training BSM: %f, Testing SM: %f, Testing 
 #Create the tree
 dt = DecisionTreeClassifier(max_depth= args.max_depth, criterion=kldc)
 
-
 # Create and fit an AdaBoosted decision tree
 bdt = AdaBoostClassifier(dt, algorithm= args.boost_algorithm,n_estimators= args.est_num)
 bdt.fit(X_train, y_train, w_train)
 
+#setup the decision functions, which will be used by the histograms as well
 test_decision_function = bdt.decision_function(X_test)
 train_decision_function = bdt.decision_function(X_train)
 
 ende_training = time.time()
 logger.info('Time to train the tree ' +  '{:5.3f}s'.format(ende_training-start))
 
-
 #get the directory for data
 output_dir = os.path.join(tmp_directory, args.data_version)
 if not os.path.exists(output_dir):
     os.makedirs( output_dir)
-
 
 #get the output directory for plots
 output_directory = os.path.join(plot_directory,'Kullback-Leibler-Plots',  argParser.prog.split('.')[0], vversion)
 if not os.path.exists(output_directory):
     os.makedirs(output_directory)
 logger.info('Save to %s directory', output_directory)
-
 
 #setup the historgramms
 h_dis_train_SM = ROOT.TH1D("dis_train_sm", "Discriminator", 12, -1, 1)
@@ -167,8 +160,6 @@ h_dis_train_BSM.SetLineStyle(7)
 h_dis_test_SM.SetLineStyle(1)
 h_dis_test_BSM.SetLineStyle(1)
 
-
-
 #set colors
 h_dis_train_SM.SetFillColor(ROOT.kBlue+3)
 h_dis_train_BSM.SetFillColor(ROOT.kRed+3)
@@ -186,9 +177,7 @@ ROOT.gStyle.SetOptStat(0)
 
 logger.info('Zeit bis vor der Loop: ' + '{:5.3f}s'.format(time.time()-start))
 
-
 #loop over the feature vektor to fill the histogramms (test data)
-
 for i in xrange(len(X_test)):
     if y_test[i] == 0:
         h_dis_test_SM.Fill(test_decision_function[i],w_test[i])
@@ -278,6 +267,7 @@ h_dis_test_BSM.Draw("h same e")
 #get the maximum value
 max_value_hist = max(h_dis_train_SM.GetMaximum(), h_dis_train_BSM.GetMaximum(), h_dis_test_SM.GetMaximum(), h_dis_test_BSM.GetMaximum())
 max_value_margin = max_value_hist / 10.0
+
 #scale the plots
 h_dis_train_SM.SetMaximum(max_value_hist + max_value_margin)
 h_dis_train_SM.Draw("h e")
@@ -285,14 +275,12 @@ h_dis_train_BSM.Draw("h same e")
 h_dis_test_SM.Draw("h same e")
 h_dis_test_BSM.Draw("h same e")
 
-
 #add a legend
 leg = ROOT.TLegend(0.65, 0.9, 0.9, 0.65)
 leg.AddEntry(h_dis_train_SM,"SM Training")
 leg.AddEntry(h_dis_train_BSM,"BSM Training")
 leg.AddEntry(h_dis_test_SM,"SM Testing")
 leg.AddEntry(h_dis_test_BSM,"BSM Testing")
-
 leg.Draw()
 
 #label the axes
@@ -301,8 +289,6 @@ h_dis_train_SM.GetYaxis().SetTitle("Normalized number of events")
 
 #Save to file
 c.Print(os.path.join( output_directory, 'ttz-kule' + version + '.png'))
-
-
 
 #stop the timer
 ende = time.time()

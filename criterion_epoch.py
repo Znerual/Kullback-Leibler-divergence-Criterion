@@ -73,50 +73,61 @@ version += '_maxDepth' + str(args.max_depth) + '_estStart' + str( args.n_est_sta
 
 def tplot(epoch, data, data_error):
     #setup and config the plot
-    c = ROOT.TCanvas("c1", "Criterion Epoch Plot", 1200, 800)
-    c.SetFillColor(42)
-    c.SetGrid()
+    ca = ROOT.TCanvas("c1", "Criterion Epoch Plot", 1920, 1080)
+    ca.SetFillColor(0)
+    ca.SetGrid()
     class_names = ["Gini", "Kule" , "Entropy"]
-    plot_colors = [["#000cff","#ff0f00"], ["#49a0ff", "#fa80ff"], ["#8ff3ff", "#f00000"]]
-    line_width = 6
-    marker_style = 21
+    plot_colors = [[ROOT.kRed,ROOT.kCyan], [ROOT.kGreen, ROOT.kMagenta], [ROOT.kBlue, ROOT.kYellow]]
+    line_width = 2
+    marker_style = 2
     limits = [100000,0]
     mg = ROOT.TMultiGraph()
     for n,c in zip(class_names, plot_colors):
-        #seperate the data into the two criteiron lists for better readability
-        gini_data = np.array( [i[0] for i in data[n]] )
-        kule_data = np.array( [i[1] for i in data[n]] )
-        gini_error = np.array( [i[0] for i in data_error[n]] )
-        kule_error = np.array( [i[1] for i in data_error[n]] )
+        #seperate the data into the two criteiron lists for better readability, and prepare them as arrays
+        gini_data = np.array( [i[0] for i in data[n]], dtype = float )
+        kule_data = np.array( [i[1] for i in data[n]], dtype = float )
+        gini_error = np.array( [i[0] for i in data_error[n]], dtype = float )
+        kule_error = np.array( [i[1] for i in data_error[n]], dtype = float )
+        epoch = np.array( epoch, dtype=float)
+        zeros = np.zeros(len(epoch), dtype=float)        
+        #getting the min and max values for the plot axes
         if min(gini_data.min(), kule_data.min()) < limits[0]: limits[0] = min(gini_data.min(), kule_data.min())
         if max(gini_data.max(), kule_data.max()) > limits[1]: limits[1] = max(gini_data.max(), kule_data.max())
-
-        grg = ROOT.TGraphErrors(len(epoch), epoch, gini_data, 0, gini_error)
+        
+        #setup the gini error graph
+        grg = ROOT.TGraphErrors(len(epoch), epoch, gini_data, zeros, gini_error)
         grg.SetName(n + "gini")
-        grg.SetLineColor(c+5)
+        grg.SetLineColor(c[0]+5)
         grg.SetLineWidth(line_width)
-        grg.SetMarkerColor(c+3)
+        grg.SetMarkerColor(c[0]+3)
         grg.SetMarkerStyle(marker_style)
         grg.SetTitle('Trained with ' + n + ' gini index')
         mg.Add(grg)
 
-        grk = ROOT.TGraphErrors(len(epoch), epoch, kule_data, 0, kule_error)
+        #setup the kule error graph
+        grk = ROOT.TGraphErrors(len(epoch), epoch, kule_data, zeros, kule_error)
         grk.SetName(n + "kule")
-        grk.SetLineColor(c-5)
+        grk.SetLineColor(c[1]-5)
         grk.SetLineWidth(line_width)
-        grk.SetMarkerColor(c+3)
+        grk.SetMarkerColor(c[1]+3)
         grk.SetMarkerStyle(marker_style)
         grk.SetTitle('Trained with ' + n + ' kule index')
         mg.Add(grk)
+
+    #setup the multiplot and draw
     mg.SetMinimum(limits[0] - 1)
     mg.SetMaximum(limits[1] + 1)
     mg.Draw("APL")
     mg.GetXaxis().SetTitle("Epoch")
     mg.GetYaxis().SetTitle("Criterion")
     
-    c.BuildLegend()
+    #get the legend
+    ca.BuildLegend()
 
-    c.Print(os.path.join( output_directory, 'ROOT-Epoch' + version + '.png'))
+    #save the plot
+    ca.Print(os.path.join( output_directory, 'ROOT-Epoch' + version + '.png'))
+
+
 def plot(epoch, data):
     #pyplot settings
     class_names = ["Gini", "Kule" , "Entropy"]
@@ -217,7 +228,6 @@ def get_histograms(X_test, X_train, y_test, y_train, w_test, w_train, test_decis
     w_test_sum_sm = h_dis_test_SM.Integral()
     w_test_sum_bsm = h_dis_test_BSM.Integral()
 
-
     logger.info("Yields after fitting: Training SM %f, Train BSM %f, Testing SM %f, Testing BSM %f",w_train_sum_sm, w_train_sum_bsm, w_test_sum_sm, w_test_sum_bsm )
 
     #normalize the histograms
@@ -232,7 +242,6 @@ def get_histograms(X_test, X_train, y_test, y_train, w_test, w_train, test_decis
 #find directory
 input_directory = os.path.join(tmp_directory, args.data_version)
 logger.debug('Import data from %s', input_directory)
-
 
 #read data from file
 df = pd.read_hdf(os.path.join(input_directory, args.data))
