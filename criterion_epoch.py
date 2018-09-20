@@ -28,6 +28,7 @@ start = time.time()
 import argparse
 argParser = argparse.ArgumentParser(description = "Argument Parser")
 argParser.add_argument('--logLevel', action='store', default='INFO', nargs='?', choices=['CRITICAL', 'ERROR', 'WARNING', 'INFO', 'DEBUG', 'TRACE', 'NOTSET'], help="Log level for logging")
+argParser.add_argument('--choice', action='store', default='test', nargs='?', choices=['test', 'error_test', 'train', 'error_train'], help="Which data gets plottet")
 argParser.add_argument('--small', action='store_true', help='Use the small dataset')
 argParser.add_argument('--data', action='store',default='data.h5')
 argParser.add_argument('--data_version', action='store',default='v2',help='Version of the data to be used')
@@ -45,7 +46,7 @@ argParser.add_argument('--ptz_only', action='store_true', help='Only use the pTZ
 args = argParser.parse_args()
 
 #Set the version of the script
-vversion = 'v12'
+vversion = 'v1'
 
 #set criterion, you can choose from (gini, kule, entropy, hellinger)
 
@@ -68,46 +69,30 @@ if args.swap_hypothesis:
     version += '_swap'
 if args.ptz_only:
     version +='_ptconly'
-version += '_maxDepth' + str(args.max_depth) + '_estStart' + str( args.n_est_start) + '_estEnd' + str(args.n_est_end) + '_EstNum' + str(args.est_num) + '_BoostAlg'  + str(args.boost_algorithm) + '_RandState' + str(args.random_state)
+version += '_maxDepth' + str(args.max_depth) + '_estStart' + str( args.n_est_start) + '_estEnd' + str(args.n_est_end) + '_estNum' + str(args.est_num) + '_BoostAlg'  + str(args.boost_algorithm) + '_RandState' + str(args.random_state) + '_choice' + args.choice
 
 
 
-def plot(epoch, test, train, error_test, error_train, choice):
+def plot(epoch, data):
+    #pyplot settings
     class_names = ["Gini", "Kule" , "Entropy"]
     plot_colors = [["#000cff","#ff0f00"], ["#49a0ff", "#fa80ff"], ["#8ff3ff", "#f00000"]]
     plt.figure(figsize=(18,18))
     plot_step = 0.05
-    #pyplot settings
+    limits = (100000,0)
     for n,c  in zip(class_names, plot_colors):
-        if choice == 'test':
-            plt.plot(epoch, [i[0] for i in test[n]],c[0],marker='o', label='Trained with ' + n + ' gini index')  #0 is the gini 
-            plt.plot(epoch, [i[1] for i in test[n]],c[1],linestyle="--",marker='o', label='Trained with ' + n + 'kullback-leibler divergence')  #1 is the kule div
-            yrange_min = min(np.array([i[0] for i in test[n]]).min(), np.array([i[1] for i in test[n]]).min())
-            yrange_max = max(np.array([i[0] for i in test[n]]).max(), np.array([i[1] for i in test[n]]).max())
-            plt.ylim(yrange_min, yrange_max)
-        elif choice == 'train':
-            plt.plot(epoch, [i[0] for i in train[n]],c[0], marker='o', label='Trained with ' + n + ', gini index')  #0 is the gini 
-            plt.plot(epoch, [i[1] for i in train[n]],c[1], marker='o', linestyle="--", label='Trained with ' + n + ', kullback-leibler divergence')  #1 is the kule div
-            yrange_min = min(np.array([i[0] for i in train[n]]).min(), np.array([i[1] for i in train[n]]).min())
-            yrange_max = max(np.array([i[0] for i in train[n]]).max(), np.array([i[1] for i in train[n]]).max())
-            plt.ylim(yrange_min, yrange_max)
-        elif choice == 'error_test':
-            yrange_min = min(np.array([i[0] for i in error_test[n]]).min(), np.array([i[1] for i in error_test[n]]).min())
-            yrange_max = max(np.array([i[0] for i in error_test[n]]).max(), np.array([i[1] for i in error_test[n]]).max())
-            plt.ylim(yrange_min, yrange_max)
-            plt.plot(epoch, [i[0] for i in error_test[n]],c[0],marker='o', label='Trained with ' + n + ', gini index')  #0 is the gini 
-            plt.plot(epoch, [i[1] for i in error_test[n]],c[1],marker='o',linestyle="--", label='Trained with ' + n + ', kullback-leibler divergence')  #1 is the kule div 
-        elif choice == 'error_train':
-            plt.plot(epoch, [i[0] for i in error_train[n]],c[0], marker='o', label='Trained with ' + n + ' gini index')  #0 is the gini 
-            plt.plot(epoch, [i[1] for i in error_train[n]],c[1],marker='o', linestyle="--", label='Trained with ' + n + ', kullback-leibler divergence')  #1 is the kule div
-            yrange_min = min(np.array([i[0] for i in error_train[n]]).min(), np.array([i[1] for i in error_train[n]]).min())
-            yrange_max = max(np.array([i[0] for i in error_train[n]]).max(), np.array([i[1] for i in error_train[n]]).max())
-            plt.ylim(yrange_min, yrange_max)
-        else:
-            return
-    plt.legend(loc='right')
-   # plt.ylim(plot_range)
+        #seperate the data into the two criteiron lists for better readability
+        gini_data = np.array( [i[0] for i in data[n]] )
+        kule_data = np.array( [i[1] for i in data[n]] )
+        #plot the critierons
+        plt.plot(epoch, gini_data,c[0], marker='o', label='Trained with ' + n + ' gini index')   
+        plt.plot(epoch, kule_data ,c[1], linestyle="--",marker='o', label='Trained with ' + n + 'kullback-leibler divergence') 
+        #get the biggest and smallest value
+        if min(gini_data.min(), kule_data.min()) < limits[0]: limits[0] = min(gini_data.min(), kule_data.min())
+        if max(gini_data.max(), kule_data.max()) > limits[1]: limits[1] = max(gini_data.max(), kule_data.max())
+    plt.ylim(limits)
     plt.xlim((epoch.min(),epoch.max()))
+    plt.legend(loc='right')
     
     plt.xlabel('Epoch')
     plt.ylabel('Criterion')
@@ -144,8 +129,6 @@ def get_histograms(X_test, X_train, y_test, y_train, w_test, w_train, test_decis
     h_dis_test_SM.SetLineStyle(1)
     h_dis_test_BSM.SetLineStyle(1)
 
-
-
     #set colors
     h_dis_train_SM.SetFillColor(ROOT.kBlue+3)
     h_dis_train_BSM.SetFillColor(ROOT.kRed+3)
@@ -163,9 +146,7 @@ def get_histograms(X_test, X_train, y_test, y_train, w_test, w_train, test_decis
 
     logger.info('Zeit bis vor der Loop: ' + '{:5.3f}s'.format(time.time()-start))
 
-
     #loop over the feature vektor to fill the histogramms (test data)
-
     for i in xrange(len(X_test)):
         if y_test[i] == 0:
             h_dis_test_SM.Fill(test_decision_function[i],w_test[i])
@@ -220,8 +201,7 @@ X = np.concatenate((X1,X1))
 y0 = np.zeros(len(X1))
 y1 = np.ones(len(X1))
 y = np.concatenate((y0,y1))
-    #read weights
-#normalize weights, used the mean to scale it before
+    #read weights, normalize weights, used the mean to scale it before
 w0 = np.array(df['sm_weight'])
 sm_weight_sum = np.sum(w0)
 w0 /= sm_weight_sum
@@ -233,49 +213,60 @@ if args.swap_hypothesis:
 else:
     w = np.concatenate((w0,w1))
 
-    
 logger.info('Sum of sm_weights: %f, Sum of bsm_weights: %f',sm_weight_sum, bsm_weight_sum  )
 
 #split the data into validation and trainings set
 X_train, X_test, y_train, y_test, w_train, w_test = train_test_split(X,y,w,test_size= 0.5, random_state=0)
-
-
-
-criterion_list = ['gini', 'entropy', kldc]
-name_list = ['Gini' , 'Entropy' , 'Kule']
-test = {}
-train = {}
-error_test = {}
-error_train = {}
-kl = KullbackLeibler(logger)
-gi = Gini(logger)
 if args.ptz_only:
     X_train = np.reshape(X_train, (-1,1))
     X_test = np.reshape(X_test, (-1,1))
 
+#setting up the lists for iterationg through the different criterions
+criterion_list = ['gini', 'entropy', kldc]
+name_list = ['Gini' , 'Entropy' , 'Kule']
+
+#setting up the result dictionarys
+test = {}
+train = {}
+error_test = {}
+error_train = {}
+
+#initialising the criterions
+kl = KullbackLeibler(logger)
+gi = Gini(logger)
+
 for crit, name in zip(criterion_list, name_list):
-#Create the tree
+    #Create the tree
     dt = DecisionTreeClassifier(max_depth= args.max_depth, criterion=crit)
+    
+    #create the n_estimators to loop over
     parameters = np.linspace(args.n_est_start, args.n_est_end, num=args.est_num, dtype=np.int32) 
 
     for para in parameters:
-        # Create and fit an AdaBoosted decision tree for kule criterion
+        # Create and fit an AdaBoosted decision tree for the selected criterion
         bdt = AdaBoostClassifier(dt, algorithm= args.boost_algorithm,n_estimators= para)
         bdt.fit(X_train, y_train, w_train)
+
         #get the decision functions from the kule tree
         test_dec_fct = bdt.decision_function(X_test)
         train_dec_fct = bdt.decision_function(X_train)
+
         #get the histograms for kule
         h_dis_train_SM, h_dis_train_BSM, h_dis_test_SM, h_dis_test_BSM = get_histograms(X_test, X_train, y_test, y_train, w_test, w_train, test_dec_fct, train_dec_fct)
+ 
         #Berechne die Kule Div und den Gini
         kule_test, k_error_test = kl.kule_div(h_dis_test_SM, h_dis_test_BSM)
         kule_train, k_error_train = kl.kule_div(h_dis_train_SM, h_dis_train_BSM)
         gini_test, g_error_test = gi.gini(h_dis_test_SM, h_dis_test_BSM)
         gini_train, g_error_train = gi.gini(h_dis_train_SM, h_dis_train_BSM)
+        
+        #reset the histogramms to fill them again next iteration
         h_dis_train_SM.Delete()
         h_dis_train_BSM.Delete()
         h_dis_test_SM.Delete()
-        h_dis_test_BSM.Delete()        
+        h_dis_test_BSM.Delete()
+        
+        #fill the result dictionarys       
         if name in test:
             test[name].append((gini_test, kule_test))
             train[name].append((gini_train, kule_train))
@@ -292,19 +283,24 @@ for crit, name in zip(criterion_list, name_list):
 ende_training = time.time()
 logger.info('Time to train the tree ' +  '{:5.3f}s'.format(ende_training-start))
 
-
-
 #get the output directory for plots
 output_directory = os.path.join(plot_directory,'Kullback-Leibler-Plots',  argParser.prog.split('.')[0], vversion)
 if not os.path.exists(output_directory):
     os.makedirs(output_directory)
 logger.info('Save to %s directory', output_directory)
 
-
-#end if no_plot argument was choosen
+#end if no_plot argument was choosen, else plot the choosen result dictionary
 if not args.no_plot:
-    plot(parameters, test, train, error_test, error_train, 'test')
-
+    if args.choice == 'test':
+        plot(parameters, test)
+    elif args.choice == 'train':
+        plot(parameters, train)   
+    elif args.choice == 'error_train':
+        plot(parameters, error_train)
+    elif args.choice == 'error_test':
+        plot(parameters, error_test)
+    else:
+        logger.error("Wrong type of data for plotting was choosen %s", args.choice)
 
 #stop the timer
 ende = time.time()
