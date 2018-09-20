@@ -13,15 +13,17 @@ class KullbackLeibler:
           
         kule = 0
         varianz = 0
+        
         #loop over all the selected histo bins
         for i in range(1 + start_index_offset,bsm.GetNbinsX()+1):
             p = bsm.GetBinContent(i)
             q = sm.GetBinContent(i)
             w_bsm = bsm.GetBinError(i)
             w_sm = sm.GetBinError(i)
+            
             #round, to avoid 0 != 0 
             if round(p,6) ==  0.0 and round(q,6) == 0.0: continue
-            with np.errstate(divide='raise'):
+            with np.errstate(divide='raise'): #this makes numpy warnings to Exceptions which can be caught
                 try:
                     lg = np.log(p/q)
                     kule += p * lg
@@ -36,17 +38,24 @@ class Gini:
     def __init__(self, logger):
         self.logger = logger
     def gini(self, sm, bsm, start_index_offset=0):
+        #checking for correct input
+        assert sm.GetNbinsX() == bsm.GetNbinsX(), "Different Bin counts, in criterion.py"
         assert sm.GetNbinsX() == bsm.GetNbinsX(), "Different Bin counts, in criterion.py"
         assert start_index_offset < sm.GetNbinsX()
         gini = 0
         varianz = 0
+        
+        #looping over the selected bins
         for i in range(1 + start_index_offset,bsm.GetNbinsX()+1):
+            #reading out the bins
             p = bsm.GetBinContent(i)
             q = sm.GetBinContent(i)
             w_bsm = bsm.GetBinError(i)
             w_sm = sm.GetBinError(i)
-            if  (round(p,7) ==  0.0 and round(q,7) == 0.0): continue
-            with np.errstate(divide='raise'):
+
+            #round to skip when both bins are empty
+            if  (round(p,6) ==  0.0 and round(q,6) == 0.0): continue
+            with np.errstate(divide='raise'): #to catch numpy warnings
                 try:
                     gini += (p / np.sqrt(p + q))
                     varianz_nenner = 4.0 * (p + q)**3

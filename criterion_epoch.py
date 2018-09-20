@@ -71,15 +71,59 @@ if args.ptz_only:
     version +='_ptconly'
 version += '_maxDepth' + str(args.max_depth) + '_estStart' + str( args.n_est_start) + '_estEnd' + str(args.n_est_end) + '_estNum' + str(args.est_num) + '_BoostAlg'  + str(args.boost_algorithm) + '_RandState' + str(args.random_state) + '_choice' + args.choice
 
+def tplot(epoch, data, data_error):
+    #setup and config the plot
+    c = TCanvas("c1", "Criterion Epoch Plot", form=5)
+    c.SetFillColor(42)
+    c.SetGrid()
+    class_names = ["Gini", "Kule" , "Entropy"]
+    plot_colors = [["#000cff","#ff0f00"], ["#49a0ff", "#fa80ff"], ["#8ff3ff", "#f00000"]]
+    line_width = 6
+    marker_style = 21
+    limits = [100000,0]
+    mg = TMultiGraph()
+    for n,c in zip(class_name, plot_colors):
+        #seperate the data into the two criteiron lists for better readability
+        gini_data = np.array( [i[0] for i in data[n]] )
+        kule_data = np.array( [i[1] for i in data[n]] )
+        gini_error = np.array( [i[0] for i in data_error[n]] )
+        kule_error = np.array( [i[1] for i in data_error[n]] )
+        if min(gini_data.min(), kule_data.min()) < limits[0]: limits[0] = min(gini_data.min(), kule_data.min())
+        if max(gini_data.max(), kule_data.max()) > limits[1]: limits[1] = max(gini_data.max(), kule_data.max())
 
+        grg = TGraphErrors(len(epoch), epoch, gini_data, 0, gini_error)
+        grg.SetName(n + "gini")
+        grg.SetLineColor(c+5)
+        grg.SetLineWidth(line_width)
+        grg.SetMarkerColor(c+3)
+        grg.SetMarkerStyle(marker_style)
+        grg.SetTitle('Trained with ' + n + ' gini index')
+        mg.Add(grg)
 
+        grk = TGraphErrors(len(epoch), epoch, kule_data, 0, kule_error)
+        grk.SetName(n + "kule")
+        grk.SetLineColor(c-5)
+        grk.SetLineWidth(line_width)
+        grk.SetMarkerColor(c+3)
+        grk.SetMarkerStyle(marker_style)
+        grk.SetTitle('Trained with ' + n + ' kule index')
+        mg.Add(grk)
+    mg.SetMinimum(limits[0] - 1)
+    mg.SetMaximum(limits[1] + 1)
+    mg.Draw("APL")
+    mg.GetXaxis().SetTitle("Epoch")
+    mg.GetYaxis().SetTitle("Criterion")
+    
+    c.BuildLegend()
+
+    c.Print(os.path.join( output_directory, 'ROOT-Epoch' + version + '.png'))
 def plot(epoch, data):
     #pyplot settings
     class_names = ["Gini", "Kule" , "Entropy"]
     plot_colors = [["#000cff","#ff0f00"], ["#49a0ff", "#fa80ff"], ["#8ff3ff", "#f00000"]]
     plt.figure(figsize=(18,18))
     plot_step = 0.05
-    limits = (100000,0)
+    limits = [100000,0]
     for n,c  in zip(class_names, plot_colors):
         #seperate the data into the two criteiron lists for better readability
         gini_data = np.array( [i[0] for i in data[n]] )
@@ -293,12 +337,16 @@ logger.info('Save to %s directory', output_directory)
 if not args.no_plot:
     if args.choice == 'test':
         plot(parameters, test)
+        tplot(parameters, test, error_test)
     elif args.choice == 'train':
-        plot(parameters, train)   
+        plot(parameters, train)
+        tplot(parameters, train, error_train)   
     elif args.choice == 'error_train':
         plot(parameters, error_train)
+        tplot(parameters, train, error_train)   
     elif args.choice == 'error_test':
         plot(parameters, error_test)
+        tplot(parameters, test, error_test)
     else:
         logger.error("Wrong type of data for plotting was choosen %s", args.choice)
 
