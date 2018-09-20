@@ -79,7 +79,7 @@ def tplot(epoch, data, data_error):
     class_names = ["Gini", "Kule" , "Entropy"]
     plot_colors = [[ROOT.kRed,ROOT.kCyan], [ROOT.kGreen, ROOT.kMagenta], [ROOT.kBlue, ROOT.kYellow]]
     line_width = 2
-    marker_style = 2
+    marker_style = 21
     limits = [100000,0]
     mg = ROOT.TMultiGraph()
     for n,c in zip(class_names, plot_colors):
@@ -97,9 +97,9 @@ def tplot(epoch, data, data_error):
         #setup the gini error graph
         grg = ROOT.TGraphErrors(len(epoch), epoch, gini_data, zeros, gini_error)
         grg.SetName(n + "gini")
-        grg.SetLineColor(c[0]+5)
+        grg.SetLineColor(c[0])
         grg.SetLineWidth(line_width)
-        grg.SetMarkerColor(c[0]+3)
+        grg.SetMarkerColor(c[0])
         grg.SetMarkerStyle(marker_style)
         grg.SetTitle('Trained with ' + n + ' gini index')
         mg.Add(grg)
@@ -107,16 +107,16 @@ def tplot(epoch, data, data_error):
         #setup the kule error graph
         grk = ROOT.TGraphErrors(len(epoch), epoch, kule_data, zeros, kule_error)
         grk.SetName(n + "kule")
-        grk.SetLineColor(c[1]-5)
+        grk.SetLineColor(c[1])
         grk.SetLineWidth(line_width)
-        grk.SetMarkerColor(c[1]+3)
+        grk.SetMarkerColor(c[1])
         grk.SetMarkerStyle(marker_style)
         grk.SetTitle('Trained with ' + n + ' kule index')
         mg.Add(grk)
 
     #setup the multiplot and draw
-    mg.SetMinimum(limits[0] - 1)
-    mg.SetMaximum(limits[1] + 1)
+    mg.SetMinimum(limits[0])
+    mg.SetMaximum(limits[1])
     mg.Draw("APL")
     mg.GetXaxis().SetTitle("Epoch")
     mg.GetYaxis().SetTitle("Criterion")

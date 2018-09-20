@@ -17,63 +17,47 @@ from gen_datasets import *
 # TTXPheno
 from TTXPheno.Tools.user import plot_directory 
 
+#generate the dataset
 X,y,w, w_min = gauss_easy(n_samples_bsm=4000, n_samples_sm= 4000)
-#X,y,w,w_min = ttz_dataset()
-#print X[:2]
-#print y[:2]
-#print w[:2]
-#print w_min
-
-#assert False, "End of test reached"
 
 from kullback_leibler_divergence_criterion import KullbackLeiblerCriterion
 kldc = KullbackLeiblerCriterion(1, np.array([2], dtype='int64'))
 
 #Create the tree
-#dt = DecisionTreeClassifier(max_depth=2, criterion=kldc)
 dt = DecisionTreeClassifier(max_depth=2, criterion='gini')
 
 # Create and fit an AdaBoosted decision tree
-bdt = AdaBoostClassifier(dt,
-                         algorithm="SAMME",
-                     n_estimators=200)
+bdt = AdaBoostClassifier(dt, algorithm="SAMME", n_estimators=200)
 bdt.fit(X, y, w)
 
-#from sklearn.ensemble import RandomForestClassifier
-#bdt = RandomForestClassifier(criterion=kldc, max_depth=2, n_estimators=100)
-#bdt.fit(X, y)
+#calculate the reached score
 score = bdt.score(X,y,w)
 print('distance score: ', score)
 
-#assert False, "End of test"
-
+#set the plot settings
 plot_colors = "br"
 plot_step = 0.02
 class_names = "AB"
-
 plt.figure(figsize=(10, 5))
 
 # Plot the decision boundaries
 plt.subplot(121)
+
+#generate the 2D Matrix for plotting the decision funciton on
 x_min, x_max = X[:, 0].min() - 1, X[:, 0].max() + 1
 y_min, y_max = X[:, 1].min() - 1, X[:, 1].max() + 1
 xx, yy = np.meshgrid(np.arange(x_min, x_max, plot_step),
                      np.arange(y_min, y_max, plot_step))
 
+#map the dec function
 Z = bdt.predict(np.c_[xx.ravel(), yy.ravel()])
 Z = Z.reshape(xx.shape)
-cs = plt.contourf(xx, yy, Z, cmap=plt.cm.Paired)
-plt.axis("tight")
 
-# Plot the training points
-#for i, n, c in zip(range(2), class_names, plot_colors):
-#    idx = np.intersect1d(np.where(y == i),np.where(w > w_min))
-#    #idx = np.where(y == i)
-#    plt.scatter(X[idx, 0], X[idx, 1],
-#                c=c, cmap=plt.cm.Paired,
-#                s=20, edgecolor='k',
-#                label="Class %s" % n,
-#                marker=".")
+#draw the countour and color it
+cs = plt.contourf(xx, yy, Z, cmap=plt.cm.Paired)
+
+#fruther plot settings
+plt.axis("tight")
 plt.xlim(x_min, x_max)
 plt.ylim(y_min, y_max)
 plt.legend(loc='upper right')
@@ -84,26 +68,29 @@ plt.title('Decision Boundary')
 # Plot the two-class decision scores
 twoclass_output = bdt.decision_function(X[np.where(w> w_min)])
 
+#get the range
 plot_range = (twoclass_output.min(), twoclass_output.max())
 plt.subplot(122)
+
+#loop over the two hypothesis (SM, BSM)
 for i, n, c in zip(range(2), class_names, plot_colors):
-    plt.hist(twoclass_output[y[np.where(w> w_min)] == i],
+    plt.hist(twoclass_output[y[np.where(w> w_min)] == i], #select only events with weights bigger than EPSILON
              bins=10,
              range=plot_range,
              facecolor=c,
              label='Class %s' % n,
              alpha=.5,
              edgecolor='k')
+
+#further plot settings
 x1, x2, y1, y2 = plt.axis()
 plt.axis((x1, x2, y1, y2 * 1.2))
 plt.legend(loc='upper right')
 plt.ylabel('Samples')
 plt.xlabel('Score \n ' + str(score))
 plt.title('Decision Scores')
-
 plt.tight_layout()
 plt.subplots_adjust(wspace=0.35)
 
-
+#save the plot
 plt.savefig(os.path.join( plot_directory, 'Kullback-Leibler-Plots','gauss-comparison-sym-gini.png'))
-#plt.show()
