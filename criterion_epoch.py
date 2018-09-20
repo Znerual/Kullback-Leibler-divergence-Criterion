@@ -69,7 +69,7 @@ if args.swap_hypothesis:
     version += '_swap'
 if args.ptz_only:
     version +='_ptconly'
-version += '_maxDepth' + str(args.max_depth) + '_estStart' + str( args.n_est_start) + '_estEnd' + str(args.n_est_end) + '_estNum' + str(args.est_num) + '_BoostAlg'  + str(args.boost_algorithm) + '_RandState' + str(args.random_state) + '_choice' + args.choice
+version += '_dataV' + str(args.data_version) + '_maxDepth' + str(args.max_depth) + '_estStart' + str( args.n_est_start) + '_estEnd' + str(args.n_est_end) + '_estNum' + str(args.est_num) + '_BoostAlg'  + str(args.boost_algorithm) + '_RandState' + str(args.random_state) + '_choice' + args.choice
 
 def tplot(epoch, data, data_error):
     #setup and config the plot
@@ -79,7 +79,7 @@ def tplot(epoch, data, data_error):
     class_names = ["Gini", "Kule" , "Entropy"]
     plot_colors = [[ROOT.kRed,ROOT.kCyan], [ROOT.kGreen, ROOT.kMagenta], [ROOT.kBlue, ROOT.kYellow]]
     line_width = 2
-    marker_style = 21
+    marker_style = 20
     limits = [100000,0]
     mg = ROOT.TMultiGraph()
     for n,c in zip(class_names, plot_colors):
@@ -99,20 +99,20 @@ def tplot(epoch, data, data_error):
         grg.SetName(n + "gini")
         grg.SetLineColor(c[0])
         grg.SetLineWidth(line_width)
-        grg.SetMarkerColor(c[0])
+        grg.SetMarkerColor(c[0]+5)
         grg.SetMarkerStyle(marker_style)
         grg.SetTitle('Trained with ' + n + ' gini index')
-        mg.Add(grg)
+        mg.Add(grg, 'lp')
 
         #setup the kule error graph
         grk = ROOT.TGraphErrors(len(epoch), epoch, kule_data, zeros, kule_error)
         grk.SetName(n + "kule")
         grk.SetLineColor(c[1])
         grk.SetLineWidth(line_width)
-        grk.SetMarkerColor(c[1])
+        grk.SetMarkerColor(c[1] + 5)
         grk.SetMarkerStyle(marker_style)
         grk.SetTitle('Trained with ' + n + ' kule index')
-        mg.Add(grk)
+        mg.Add(grk, 'lp')
 
     #setup the multiplot and draw
     mg.SetMinimum(limits[0])
@@ -122,7 +122,7 @@ def tplot(epoch, data, data_error):
     mg.GetYaxis().SetTitle("Criterion")
     
     #get the legend
-    ca.BuildLegend()
+    ca.BuildLegend(0.7, 0.4, 1.0, 0.6)
 
     #save the plot
     ca.Print(os.path.join( output_directory, 'ROOT-Epoch' + version + '.png'))
