@@ -73,7 +73,7 @@ version += '_maxDepth' + str(args.max_depth) + '_estStart' + str( args.n_est_sta
 
 def tplot(epoch, data, data_error):
     #setup and config the plot
-    c = TCanvas("c1", "Criterion Epoch Plot", form=5)
+    c = ROOT.TCanvas("c1", "Criterion Epoch Plot", 1200, 800)
     c.SetFillColor(42)
     c.SetGrid()
     class_names = ["Gini", "Kule" , "Entropy"]
@@ -81,8 +81,8 @@ def tplot(epoch, data, data_error):
     line_width = 6
     marker_style = 21
     limits = [100000,0]
-    mg = TMultiGraph()
-    for n,c in zip(class_name, plot_colors):
+    mg = ROOT.TMultiGraph()
+    for n,c in zip(class_names, plot_colors):
         #seperate the data into the two criteiron lists for better readability
         gini_data = np.array( [i[0] for i in data[n]] )
         kule_data = np.array( [i[1] for i in data[n]] )
@@ -91,7 +91,7 @@ def tplot(epoch, data, data_error):
         if min(gini_data.min(), kule_data.min()) < limits[0]: limits[0] = min(gini_data.min(), kule_data.min())
         if max(gini_data.max(), kule_data.max()) > limits[1]: limits[1] = max(gini_data.max(), kule_data.max())
 
-        grg = TGraphErrors(len(epoch), epoch, gini_data, 0, gini_error)
+        grg = ROOT.TGraphErrors(len(epoch), epoch, gini_data, 0, gini_error)
         grg.SetName(n + "gini")
         grg.SetLineColor(c+5)
         grg.SetLineWidth(line_width)
@@ -100,7 +100,7 @@ def tplot(epoch, data, data_error):
         grg.SetTitle('Trained with ' + n + ' gini index')
         mg.Add(grg)
 
-        grk = TGraphErrors(len(epoch), epoch, kule_data, 0, kule_error)
+        grk = ROOT.TGraphErrors(len(epoch), epoch, kule_data, 0, kule_error)
         grk.SetName(n + "kule")
         grk.SetLineColor(c-5)
         grk.SetLineWidth(line_width)

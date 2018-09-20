@@ -48,8 +48,6 @@ args = argParser.parse_args()
 #Set the version of the script
 vversion = 'v1'
 
-#set criterion, you can choose from (gini, kule, entropy, hellinger)
-
 #Logger
 import RootTools.core.logger as Logger
 logger = Logger.get_logger(args.logLevel, logFile = None)
@@ -88,8 +86,7 @@ X = np.concatenate((X1,X1))
 y0 = np.zeros(len(X1))
 y1 = np.ones(len(X1))
 y = np.concatenate((y0,y1))
-    #read weights
-#normalize weights, used the mean to scale it before
+    #read weights, normalize weights, used the mean to scale it before
 w0 = np.array(df['sm_weight'])
 sm_weight_sum = np.sum(w0)
 w0 /= sm_weight_sum
@@ -112,6 +109,8 @@ w_test_sum_sm = 0.0
 w_test_sum_bsm = 0.0
 w_train_sum_sm = 0.0
 w_train_sum_bsm = 0.0
+
+#going through all weights and selecting them with their label
 for i  in xrange(len(w_train)):
     if y_train[i] == 0:
         w_train_sum_sm += w_train[i]
@@ -136,18 +135,17 @@ elif args.criterion == 'entropy':
 else:
     assert False, "You choose the wrong Classifier"
 
-
+#reshape the data only the ptz feature should be used
 if args.ptz_only:
     X_train = np.reshape(X_train, (-1,1))
     X_test = np.reshape(X_test, (-1,1))
 
-
+#train the tree
 bdt = AdaBoostClassifier(dt, algorithm = args.boost_algorithm, n_estimators=args.n_est)
 bdt.fit(X_train, y_train, w_train)
 ende_training = time.time()
 
 logger.info('Time to train the tree ' +  '{:5.3f}s'.format(ende_training-start))
-
 
 #get the directory for data
 output_dir = os.path.join(tmp_directory, args.data_version)
@@ -165,8 +163,6 @@ if args.export:
     export_graphviz(bdt, out_file= os.path.join(output_dir, version + "-tree.dot"))
     logger.info("Exported the tree as .dot to %s", os.path.join(output_dir, version + "-tree.dot")) 
 
-
-
 #end if no_plot argument was choosen
 if args.no_plot:
     raise SystemExit
@@ -182,81 +178,42 @@ class_names = ["SM Test", "BSM Test" , "SM Train", "BSM Train"]
 plot_colors = ["#000cff","#ff0000", "#9ba0ff" , "#ff8d8d"]
 plt.figure(figsize=(18,8)).suptitle("Decision Boundaries for test- (top) and trainings-dataset (bottom) \n n: " + str(args.n_est), fontsize=18)
 plot_step = 0.075
-#plot_range = (min(min(train_scores), min(test_scores), max(max(train_scores), max(test_scores))))
-##show the performance plot
-#plt.subplot(2,2,1)
-#plt.plot(parameters, train_scores, label='Train')
-#plt.plot(parameters, test_scores, label='Test')
-#plt.vlines(para_optim, plt.ylim()[0], np.max(test_scores), color='k',
-#           linewidth=3, label='Optimum on test')
-#plt.legend(loc='lower left')
-#plt.ylim(plot_range)
-#plt.xlabel('Regularization parameter')
-#plt.ylabel('Performance')
 
-##Plot the decision diagram
-#plt.subplot(2,2,2)
-
-#is used by the histogramms later
+#setup the decision functions, which will also be used by the histograms
 test_decision_function = bdt.decision_function(X_test)
 train_decision_function = bdt.decision_function(X_train)
-#plot_range = (test_decision_function.min(), test_decision_function.max())
-#
-#for i, n, c in zip(range(4), class_names, plot_colors):
-#    if i > 1:
-#        dec_func = train_decision_function
-#        weight = w_train
-#        label = y_train
-#    else:
-#        dec_func = test_decision_function
-#        weight = w_test
-#        label = y_test
-#    plt.hist(dec_func[np.where(label == i % 2)] ,
-#             bins=10,
-#             range=plot_range,
-#             facecolor=c,
-#             weights=weight[np.where(label == i % 2)],
-#             label='Class %s' %  n,
-#             alpha=.5,
-#             edgecolor='k')
-#    x1, x2, y1, y2 = plt.axis()
-#    plt.axis((x1, x2, y1, y2 * 1.2))
-#    plt.legend(loc='upper right')
-#    plt.ylabel('Samples')
-#    plt.xlabel('Score' )
-#    plt.title('Decision Scores')
-#
-##Plot the decision boundaries and generate the decision data for test data
+
+#show the decision shape for test data
 plt.subplot(2,1,1)
 if args.ptz_only:
+    #generate the 1 values which will be used to generate the cut values
     x_min, x_max = X_test.min() - 1, X_test.max() + 1
     xx = np.arange(x_min, x_max, plot_step)
     xx = np.reshape(xx, (-1,1))
+    
+    #map the decision function
     Z = bdt.decision_function(xx)
     Z = np.reshape(Z, (-1,1))
+
+    #get the limits and plot the function
     y_min, y_max = Z.min() - 1, Z.max() + 1
     plt.plot(xx, Z) 
 else:
+    #generate the 2D Matrix, which will be used to generate the values
     x_min, x_max = X_test[:, 0].min() - 1, X_test[:, 0].max() + 1
     y_min, y_max = X_test[:, 1].min() - 0.1 , X_test[:, 1].max() + 0.1
-    xx, yy = np.meshgrid(np.arange(x_min, x_max, plot_step),
-                     np.arange(y_min, y_max, plot_step))
-    Z = bdt.decision_function(np.c_[xx.ravel(), yy.ravel()]) #use bdt.predict for no
+    xx, yy = np.meshgrid(np.arange(x_min, x_max, plot_step), np.arange(y_min, y_max, plot_step))
 
-    #fill the plot with gradient color
+    #map the decision function
+    Z = bdt.decision_function(np.c_[xx.ravel(), yy.ravel()]) 
     Z = Z.reshape(xx.shape)
+    
+    #fill the plot with color and draw the contour
     plt.pcolormesh(xx,yy,Z, cmap=plt.cm.coolwarm)
     cs = plt.contourf(xx, yy, Z, cmap=plt.cm.coolwarm) #plt.contour(.., linewidth=0.
-plt.axis("tight")
 
-##Plot the training points
-#for i, n, c in zip(range(2), class_names[:2], plot_colors[:2]):
-#    idx = np.where(y_test == i) #to filter weights: np.intersect1d(np.where(y == i), 
-#    plt.scatter(X_test[idx, 0], X_test[idx, 1],
-#                c=c, cmap=plt.cm.coolwarm,
-#                s=20, edgecolor='k',
-#                label="Class %s" % n,
-#                marker=".")
+#further plot settings
+plt.axis("tight")
 plt.xlim(x_min, x_max)
 plt.ylim(y_min, y_max)
 plt.legend(loc='upper right')
@@ -271,34 +228,34 @@ else:
 #Plot the decision boundaries and generate the decision data for training data
 plt.subplot(2,1,2)
 if args.ptz_only:
+    #generate the 1 values which will be used to generate the cut values
     x_min, x_max = X_train.min() - 1, X_test.max() + 1
     xx = np.arange(x_min, x_max, plot_step)
     xx = np.reshape(xx,(-1,1))
+    
+    #map the decision function
     Z = bdt.decision_function(xx)
     Z = np.reshape(Z, (-1,1))
+    
+    #get the limits and plot the function
     y_min, y_max = Z.min() - 1, Z.max() + 1
     plt.plot(xx, Z) 
 else:
+    #generate the 2D Matrix, which will be used to generate the values
     x_min, x_max = X_train[:, 0].min() - 1, X_train[:, 0].max() + 1
     y_min, y_max = X_train[:, 1].min() - 0.1, X_train[:, 1].max() + 0.1
-    xx, yy = np.meshgrid(np.arange(x_min, x_max, plot_step),
-                     np.arange(y_min, y_max, plot_step))
-    Z = bdt.decision_function(np.c_[xx.ravel(), yy.ravel()]) #use bdt.predict for no
+    xx, yy = np.meshgrid(np.arange(x_min, x_max, plot_step),np.arange(y_min, y_max, plot_step))
 
-#fill the plot with gradient color
+    #map the decision function
+    Z = bdt.decision_function(np.c_[xx.ravel(), yy.ravel()]) #use bdt.predict for no
     Z = Z.reshape(xx.shape)
+    
+    #fill the plot with color and draw the contour
     plt.pcolormesh(xx,yy,Z, cmap=plt.cm.coolwarm)
     cs = plt.contourf(xx, yy, Z, cmap=plt.cm.coolwarm) #plt.contour(.., linewidth=0.
-plt.axis("tight")
 
-##Plot the training points
-#for i, n, c in zip(range(2), class_names[:2], plot_colors[:2]):
-#    idx = np.where(y_train == i) #to filter weights: np.intersect1d(np.where(y == i), 
-#    plt.scatter(X_train[idx, 0], X_train[idx, 1],
-#                c=c, cmap=plt.cm.coolwarm,
-#                s=20, edgecolor='k',
-#                label="Class %s" % n,
-#                marker=".")
+#further plot settings
+plt.axis("tight")
 plt.xlim(x_min, x_max)
 plt.ylim(y_min, y_max)
 plt.legend(loc='upper right')
@@ -309,10 +266,9 @@ else:
     plt.xlabel('p_T(T) (GeV)')
     plt.ylabel('Cos(Theta*)')
 
-
+#generate a number of the file and save the matlib plot
 number = '%03d' % args.n_est
-#save the matlib plot
-plt.savefig(os.path.join( output_directory, args.criterion ,number + '.png'))
+plt.savefig(os.path.join( output_directory, args.criterion, number + '.png'))
 
 #setup the historgramms
 h_dis_train_SM = ROOT.TH1D("dis_train_sm", "Discriminator", 12, -1, 1)
@@ -341,8 +297,6 @@ h_dis_train_BSM.SetLineStyle(7)
 h_dis_test_SM.SetLineStyle(1)
 h_dis_test_BSM.SetLineStyle(1)
 
-
-
 #set colors
 h_dis_train_SM.SetFillColor(ROOT.kBlue+3)
 h_dis_train_BSM.SetFillColor(ROOT.kRed+3)
@@ -360,9 +314,7 @@ ROOT.gStyle.SetOptStat(0)
 
 logger.info('Zeit bis vor der Loop: ' + '{:5.3f}s'.format(time.time()-start))
 
-
 #loop over the feature vektor to fill the histogramms (test data)
-
 for i in xrange(len(X_test)):
     if y_test[i] == 0:
         h_dis_test_SM.Fill(test_decision_function[i],w_test[i])
@@ -428,7 +380,6 @@ h_dis_train_BSM.Draw("h same e")
 h_dis_test_SM.Draw("h same e")
 h_dis_test_BSM.Draw("h same e")
 
-
 #add a legend
 leg = ROOT.TLegend(0.65, 0.9, 0.9, 0.65)
 leg.AddEntry(h_dis_train_SM,"SM Training")
@@ -446,8 +397,6 @@ h_dis_train_SM.GetYaxis().SetTitle("Normalized number of events")
 
 #Save to file
 c.Print(os.path.join( output_directory, 'ttz-kule' + version + '.png'))
-
-
 
 #stop the timer
 ende = time.time()
