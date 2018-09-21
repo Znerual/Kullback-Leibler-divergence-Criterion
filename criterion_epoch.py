@@ -79,7 +79,7 @@ def tplot(epoch, data, data_error):
     class_names = ["Gini", "Kule" , "Entropy"]
     plot_colors = [[ROOT.kRed,ROOT.kCyan], [ROOT.kGreen, ROOT.kMagenta], [ROOT.kBlue, ROOT.kYellow]]
     line_width = 2
-    marker_style = 20
+    marker_style = 0
     limits = [100000,0]
     mg = ROOT.TMultiGraph()
     for n,c in zip(class_names, plot_colors):

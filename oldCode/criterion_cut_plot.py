@@ -1,3 +1,7 @@
+#This script uses the kule to train the tree and calculates the gini and kule div
+# from this tree over a cut, which goes from the first to the last bin
+
+
 # Standard imports 
 import numpy as np
 import os
@@ -33,14 +37,13 @@ argParser.add_argument('--data', action='store',default='data.h5')
 argParser.add_argument('--data_version', action='store',default='v2',help='Version of the data to be used')
 argParser.add_argument('--max_depth', action='store', default=2, type=int,nargs='?',  help="The max depth argument, which is given to the DecisionTreeClassifier")
 argParser.add_argument('--est_num', action='store', default=40, type=int,nargs='?',  help="The number of steps between the start and end of n_estimators")
-argParser.add_argument('--bin_num', action='store', default=12, type=int,nargs='?',  help="The number of bins for the histograms ")
 argParser.add_argument('--boost_algorithm', action='store', default='SAMME', nargs='?', choices=['SAMME', 'SAMME.R'], help="Choose a boosting algorithm for the AdaBoostClassifier")
 argParser.add_argument('--swap_hypothesis', action='store_true', help="Chance the Target Labels of SM and BSM Hypothesis")
 argParser.add_argument('--random_state', action='store', default=0, type=int,nargs='?',  help="The random state, which is given to the train_test_split method")
 args = argParser.parse_args()
 
 #Set the version of the script
-vversion = 'v2'
+vversion = 'v1'
 
 #Logger
 import RootTools.core.logger as Logger
@@ -57,7 +60,7 @@ if args.small:
     version += '_small'
 if args.swap_hypothesis:
     version += '_swap'
-version += '_binNum' + str(args.bin_num) +  '_maxDepth' + str(args.max_depth) +  '_EstNum' + str(args.est_num) + '_BoostAlg'  + str(args.boost_algorithm) + '_RandState' + str(args.random_state)
+version += '_maxDepth' + str(args.max_depth) +  '_EstNum' + str(args.est_num) + '_BoostAlg'  + str(args.boost_algorithm) + '_RandState' + str(args.random_state)
 
 #find directory
 input_directory = os.path.join(tmp_directory, args.data_version)
@@ -89,36 +92,36 @@ logger.info('Sum of sm_weights: %f, Sum of bsm_weights: %f',sm_weight_sum, bsm_w
 X_train, X_test, y_train, y_test, w_train, w_test = train_test_split(X,y,w,test_size= 0.5, random_state=0)
 
 #caluclate the sum of weights
-k_w_test_sum_sm = 0.0
-k_w_test_sum_bsm = 0.0
-k_w_train_sum_sm = 0.0
-k_w_train_sum_bsm = 0.0
+w_test_sum_sm = 0.0
+w_test_sum_bsm = 0.0
+w_train_sum_sm = 0.0
+w_train_sum_bsm = 0.0
 
-#caluclate the sum of weights
-g_w_test_sum_sm = 0.0
-g_w_test_sum_bsm = 0.0
-g_w_train_sum_sm = 0.0
-g_w_train_sum_bsm = 0.0
+#iterating over the weights and selecting them by their label
+for i  in xrange(len(w_train)):
+    if y_train[i] == 0:
+        w_train_sum_sm += w_train[i]
+    else:
+        w_train_sum_bsm += w_train[i]
+
+for i  in xrange(len(w_test)):
+    if y_test[i] == 0:
+        w_test_sum_sm += w_test[i]
+    else:
+        w_test_sum_bsm += w_test[i]
+
+logger.info('Yields, Training SM: %f, Training BSM: %f, Testing SM: %f, Testing BSM %f', w_train_sum_sm, w_train_sum_bsm, w_test_sum_sm, w_test_sum_bsm)
 
 #Create the tree
-dt_k = DecisionTreeClassifier(max_depth= args.max_depth, criterion=kldc)
-dt_g = DecisionTreeClassifier(max_depth= args.max_depth, criterion='gini')
+dt = DecisionTreeClassifier(max_depth= args.max_depth, criterion=kldc)
 
 # Create and fit an AdaBoosted decision tree
-bdt_k = AdaBoostClassifier(dt_k, algorithm= args.boost_algorithm,n_estimators= args.est_num)
-bdt_k.fit(X_train, y_train, w_train)
-
-# Create and fit an AdaBoosted decision tree
-bdt_g = AdaBoostClassifier(dt_g, algorithm= args.boost_algorithm,n_estimators= args.est_num)
-bdt_g.fit(X_train, y_train, w_train)
+bdt = AdaBoostClassifier(dt, algorithm= args.boost_algorithm,n_estimators= args.est_num)
+bdt.fit(X_train, y_train, w_train)
 
 #setup the decision functions, which will be used by the histograms as well
-k_test_decision_function = bdt_k.decision_function(X_test)
-k_train_decision_function = bdt_k.decision_function(X_train)
-
-#setup the decision functions, which will be used by the histograms as well
-g_test_decision_function = bdt_g.decision_function(X_test)
-g_train_decision_function = bdt_g.decision_function(X_train)
+test_decision_function = bdt.decision_function(X_test)
+train_decision_function = bdt.decision_function(X_train)
 
 ende_training = time.time()
 logger.info('Time to train the tree ' +  '{:5.3f}s'.format(ende_training-start))
@@ -135,101 +138,161 @@ if not os.path.exists(output_directory):
 logger.info('Save to %s directory', output_directory)
 
 #setup the historgramms
-k_h_dis_train_SM = ROOT.TH1D("kdis_train_sm", "Discriminator", args.bin_num, -1, 1)
-k_h_dis_train_BSM = ROOT.TH1D("kdis_train_bsm", "Discriminator", args.bin_num, -1, 1)
-k_h_dis_test_SM = ROOT.TH1D("kdis_test_sm", "Discriminator", args.bin_num, -1, 1)
-k_h_dis_test_BSM = ROOT.TH1D("kdis_test_bsm", "Discriminator", args.bin_num, -1, 1)
-
-#setup the historgramms
-g_h_dis_train_SM = ROOT.TH1D("gdis_train_sm", "Discriminator", args.bin_num, -1, 1)
-g_h_dis_train_BSM = ROOT.TH1D("gdis_train_bsm", "Discriminator", args.bin_num, -1, 1)
-g_h_dis_test_SM = ROOT.TH1D("gdis_test_sm", "Discriminator", args.bin_num, -1, 1)
-g_h_dis_test_BSM = ROOT.TH1D("gdis_test_bsm", "Discriminator", args.bin_num, -1, 1)
+h_dis_train_SM = ROOT.TH1D("dis_train_sm", "Discriminator", 12, -1, 1)
+h_dis_train_BSM = ROOT.TH1D("dis_train_bsm", "Discriminator", 12, -1, 1)
+h_dis_test_SM = ROOT.TH1D("dis_test_sm", "Discriminator", 12, -1, 1)
+h_dis_test_BSM = ROOT.TH1D("dis_test_bsm", "Discriminator", 12, -1, 1)
 
 #set the error calculationsmethod
 ROOT.TH1.SetDefaultSumw2()
+
+#set colors
+h_dis_train_SM.SetLineColor(ROOT.kBlue+2)
+h_dis_train_BSM.SetLineColor(ROOT.kRed+2)
+h_dis_test_SM.SetLineColor(ROOT.kBlue-5)
+h_dis_test_BSM.SetLineColor(ROOT.kRed-4)
+
+#set line width
+h_dis_train_SM.SetLineWidth(3)
+h_dis_train_BSM.SetLineWidth(3)
+h_dis_test_SM.SetLineWidth(3)
+h_dis_test_BSM.SetLineWidth(3)
+
+#set line style
+h_dis_train_SM.SetLineStyle(7)
+h_dis_train_BSM.SetLineStyle(7)
+h_dis_test_SM.SetLineStyle(1)
+h_dis_test_BSM.SetLineStyle(1)
+
+#set colors
+h_dis_train_SM.SetFillColor(ROOT.kBlue+3)
+h_dis_train_BSM.SetFillColor(ROOT.kRed+3)
+h_dis_test_SM.SetFillColor(ROOT.kBlue-8)
+h_dis_test_BSM.SetFillColor(ROOT.kRed-9)
+
+#set fill styles
+h_dis_train_SM.SetFillStyle(0)
+h_dis_train_BSM.SetFillStyle(0)
+h_dis_test_SM.SetFillStyle(0)
+h_dis_test_BSM.SetFillStyle(0)
+
+#hide statbox
+ROOT.gStyle.SetOptStat(0)
 
 logger.info('Zeit bis vor der Loop: ' + '{:5.3f}s'.format(time.time()-start))
 
 #loop over the feature vektor to fill the histogramms (test data)
 for i in xrange(len(X_test)):
     if y_test[i] == 0:
-        k_h_dis_test_SM.Fill(k_test_decision_function[i],w_test[i])
-        g_h_dis_test_SM.Fill(g_test_decision_function[i],w_test[i])
+        h_dis_test_SM.Fill(test_decision_function[i],w_test[i])
     else:
-        k_h_dis_test_BSM.Fill(k_test_decision_function[i],w_test[i])
-        g_h_dis_test_BSM.Fill(g_test_decision_function[i],w_test[i])
+        h_dis_test_BSM.Fill(test_decision_function[i],w_test[i])
 
 #fill with trainings data
 for i in xrange(len(X_train)): 
     if y_train[i] == 0:
-        k_h_dis_train_SM.Fill(k_train_decision_function[i],w_train[i])
-        g_h_dis_train_SM.Fill(g_train_decision_function[i],w_train[i])
+        h_dis_train_SM.Fill(train_decision_function[i],w_train[i])
     else:
-        k_h_dis_train_BSM.Fill(k_train_decision_function[i],w_train[i])
-        g_h_dis_train_BSM.Fill(g_train_decision_function[i],w_train[i])
+        h_dis_train_BSM.Fill(train_decision_function[i],w_train[i])
 
 logger.info('Zeit bis vor nach der Loop: ' + '{:5.3f}s'.format(time.time()-start))
 
-#calcuate the yields after fitting
-k_w_train_sum_sm = k_h_dis_train_SM.Integral()
-k_w_train_sum_bsm = k_h_dis_train_BSM.Integral()
-k_w_test_sum_sm = k_h_dis_test_SM.Integral()
-k_w_test_sum_bsm = k_h_dis_test_BSM.Integral()
+#setup the delta weights for comparison (only for DEBUGGING)
+w_delta_test_sum_sm = w_test_sum_sm
+w_delta_test_sum_bsm = w_test_sum_bsm
+w_delta_train_sum_sm = w_train_sum_sm 
+w_delta_train_sum_bsm = w_train_sum_bsm
 
 #calcuate the yields after fitting
-g_w_train_sum_sm = g_h_dis_train_SM.Integral()
-g_w_train_sum_bsm = g_h_dis_train_BSM.Integral()
-g_w_test_sum_sm = g_h_dis_test_SM.Integral()
-g_w_test_sum_bsm = g_h_dis_test_BSM.Integral()
+w_train_sum_sm = h_dis_train_SM.Integral()
+w_train_sum_bsm = h_dis_train_BSM.Integral()
+w_test_sum_sm = h_dis_test_SM.Integral()
+w_test_sum_bsm = h_dis_test_BSM.Integral()
+
+#calculate the delta weights
+w_delta_test_sum_sm -= w_test_sum_sm
+w_delta_test_sum_bsm -= w_test_sum_bsm
+w_delta_train_sum_sm -= w_train_sum_sm 
+w_delta_train_sum_bsm -= w_train_sum_bsm
+
+logger.info("Yields after fitting: Training SM %f, Train BSM %f, Testing SM %f, Testing BSM %f",w_train_sum_sm, w_train_sum_bsm, w_test_sum_sm, w_test_sum_bsm )
+logger.info("Difference of the weights before and after fitting: Test SM %f, Test BSM %f, Train SM %f, Train BSM %f", w_delta_test_sum_sm, w_delta_test_sum_bsm, w_delta_train_sum_sm, w_delta_train_sum_bsm)
 
 #normalize the histograms
-k_h_dis_train_SM.Scale(1/k_w_train_sum_sm)
-k_h_dis_train_BSM.Scale(1/k_w_train_sum_bsm)
-k_h_dis_test_SM.Scale(1/k_w_test_sum_sm)
-k_h_dis_test_BSM.Scale(1/k_w_test_sum_bsm)
-
-#normalize the histograms
-g_h_dis_train_SM.Scale(1/g_w_train_sum_sm)
-g_h_dis_train_BSM.Scale(1/g_w_train_sum_bsm)
-g_h_dis_test_SM.Scale(1/g_w_test_sum_sm)
-g_h_dis_test_BSM.Scale(1/g_w_test_sum_bsm)
+h_dis_train_SM.Scale(1/w_train_sum_sm)
+h_dis_train_BSM.Scale(1/w_train_sum_bsm)
+h_dis_test_SM.Scale(1/w_test_sum_sm)
+h_dis_test_BSM.Scale(1/w_test_sum_bsm)
 
 #pyplot settings
-class_names = ["Kule Training", "Gini Training"]
+class_names = ["Kule", "Gini"]
 plot_colors = ["#000cff","#ff0000"]
 plt.figure(figsize=(12,12))
-plt.title("Kullback-Leibler Divegence for left sided cut")
+plt.title("Cut")
 
-#initialice the Entropy classes
+#initialice the Gini and Entropy classes
 kl = KullbackLeibler(logger)
+gi = Gini(logger)
 
 #Generate the X values
-X_disc = range(0,k_h_dis_test_SM.GetNbinsX())
+X_disc = range(0,h_dis_test_SM.GetNbinsX())
 kule_values = []
 gini_values = []
 
 #Fill the kule and gini values
 for x in X_disc:
-    kule_test, k_error_test = kl.kule_div(k_h_dis_test_SM, k_h_dis_test_BSM, x)
-    gini_test, g_error_test = kl.kule_div(g_h_dis_test_SM, g_h_dis_test_BSM, x)
+    kule_test, k_error_test = kl.kule_div(h_dis_test_SM, h_dis_test_BSM, x)
+    gini_test, g_error_test = gi.gini(h_dis_test_SM, h_dis_test_BSM, x)
     kule_values.append(kule_test)
     gini_values.append(gini_test)
     
 plot_range = (min(min(kule_values), min(gini_values), max(max(kule_values), max(gini_values))))
 
 #show the cut plot
-plt.plot(X_disc, kule_values, label=class_names[0])
-plt.plot(X_disc, gini_values, label=class_names[1])
+plt.plot(X_disc, kule_values, label='Kule')
+plt.plot(X_disc, gini_values, label='Gini')
 plt.legend(loc='upper right')
 plt.ylim(plot_range)
-plt.xlim((0,k_h_dis_train_SM.GetNbinsX() +1))
+plt.xlim((0,h_dis_train_SM.GetNbinsX() +1))
 plt.xlabel('Cut value')
-plt.ylabel('Kullback-Leibler Divergence')
+plt.ylabel('Criterions')
 plt.axis("tight")
 
 #save the matlib plot
 plt.savefig(os.path.join( output_directory, 'cut' + version + '.png'))
+
+#Plot the diagramms
+c = ROOT.TCanvas("Discriminator", "", 2880, 1620)
+h_dis_train_SM.Draw("h e")
+h_dis_train_BSM.Draw("h same e")
+h_dis_test_SM.Draw("h same e")
+h_dis_test_BSM.Draw("h same e")
+
+#get the maximum value
+max_value_hist = max(h_dis_train_SM.GetMaximum(), h_dis_train_BSM.GetMaximum(), h_dis_test_SM.GetMaximum(), h_dis_test_BSM.GetMaximum())
+max_value_margin = max_value_hist / 10.0
+
+#scale the plots
+h_dis_train_SM.SetMaximum(max_value_hist + max_value_margin)
+h_dis_train_SM.Draw("h e")
+h_dis_train_BSM.Draw("h same e")
+h_dis_test_SM.Draw("h same e")
+h_dis_test_BSM.Draw("h same e")
+
+#add a legend
+leg = ROOT.TLegend(0.65, 0.9, 0.9, 0.65)
+leg.AddEntry(h_dis_train_SM,"SM Training")
+leg.AddEntry(h_dis_train_BSM,"BSM Training")
+leg.AddEntry(h_dis_test_SM,"SM Testing")
+leg.AddEntry(h_dis_test_BSM,"BSM Testing")
+leg.Draw()
+
+#label the axes
+h_dis_train_SM.GetXaxis().SetTitle("Discriminator")
+h_dis_train_SM.GetYaxis().SetTitle("Normalized number of events")
+
+#Save to file
+c.Print(os.path.join( output_directory, 'ttz-kule' + version + '.png'))
 
 #stop the timer
 ende = time.time()
