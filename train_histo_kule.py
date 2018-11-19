@@ -40,6 +40,7 @@ argParser.add_argument('--max_depth', action='store', default=2, type=int,nargs=
 argParser.add_argument('--n_est_start', action='store', default=100, type=int,nargs='?',  help="The n_estimators argument, which is given to the AdaBoostClassifier over an interval from n_est_start to n_est_end")
 argParser.add_argument('--n_est_end', action='store', default=2000, type=int,nargs='?',  help="The n_estimators argument, which is given to the AdaBoostClassifier")
 argParser.add_argument('--est_num', action='store', default=40, type=int,nargs='?',  help="The number of steps between the start and end of n_estimators")
+argParser.add_argument('--min_split', action='store', default=30, type=int,nargs='?',  help="Minimal amount of events in a node to split")
 argParser.add_argument('--boost_algorithm', action='store', default='SAMME', nargs='?', choices=['SAMME', 'SAMME.R'], help="Choose a boosting algorithm for the AdaBoostClassifier")
 argParser.add_argument('--swap_hypothesis', action='store_true', help="Chance the Target Labels of SM and BSM Hypothesis")
 argParser.add_argument('--random_state', action='store', default=0, type=int,nargs='?',  help="The random state, which is given to the train_test_split method")
@@ -48,7 +49,7 @@ argParser.add_argument('--ptz_only', action='store_true', help='Only use the pTZ
 args = argParser.parse_args()
 
 #Set the version of the script
-vversion = 'v12'
+vversion = 'v14'
 
 #set criterion, you can choose from (gini, kule, entropy, hellinger)
 
@@ -72,7 +73,7 @@ if args.swap_hypothesis:
     version += '_swap'
 if args.ptz_only:
     version +='_ptconly'
-version += '_maxDepth' + str(args.max_depth) + '_estStart' + str( args.n_est_start) + '_estEnd' + str(args.n_est_end) + '_EstNum' + str(args.est_num) + '_BoostAlg'  + str(args.boost_algorithm) + '_RandState' + str(args.random_state)
+version +='_minSamplesSplit' + str(args.min_split) + '_maxDepth' + str(args.max_depth) + '_estStart' + str( args.n_est_start) + '_estEnd' + str(args.n_est_end) + '_EstNum' + str(args.est_num) + '_BoostAlg'  + str(args.boost_algorithm) + '_RandState' + str(args.random_state)
 
 #find directory
 input_directory = os.path.join(tmp_directory, args.data_version)
@@ -130,11 +131,11 @@ logger.info('Yields, Training SM: %f, Training BSM: %f, Testing SM: %f, Testing 
 
 #Create the tree
 if args.criterion == 'kule':
-    dt = DecisionTreeClassifier(max_depth= args.max_depth, criterion=kldc)
+    dt = DecisionTreeClassifier(min_samples_split=args.min_split, max_depth= args.max_depth, criterion=kldc)
 elif args.criterion == 'gini':
-    dt = DecisionTreeClassifier(max_depth= args.max_depth, criterion='gini')
+    dt = DecisionTreeClassifier(min_samples_split=args.min_split, max_depth= args.max_depth, criterion='gini')
 elif args.criterion == 'entropy':    
-    dt = DecisionTreeClassifier(max_depth= args.max_depth, criterion='entropy')
+    dt = DecisionTreeClassifier(min_samples_split=args.min_split, max_depth= args.max_depth, criterion='entropy')
 else:
     assert False, "You choose the wrong Classifier"
 
@@ -145,6 +146,10 @@ test_scores = []
 if args.ptz_only:
     X_train = np.reshape(X_train, (-1,1))
     X_test = np.reshape(X_test, (-1,1))
+
+#fit the dt without adaboost and get the results
+dt.fit(X_train,y_train,w_train)
+logger.info("Score of the Decision Tree before boosting Test:%f", dt.score(X_test, y_test, w_test))
 for para in parameters:
     # Create and fit an AdaBoosted decision tree
     bdt = AdaBoostClassifier(dt, algorithm= args.boost_algorithm,n_estimators= para)
@@ -196,21 +201,21 @@ if not os.path.exists(output_directory):
 logger.info('Save to %s directory', output_directory)
 
 #pyplot settings
-class_names = ["SM Test", "BSM Test" , "SM Train", "BSM Train"]
+class_names = ["SM test", "BSM test" , "SM train", "BSM train"]
 plot_colors = ["#000cff","#ff0000", "#9ba0ff" , "#ff8d8d"]
 plt.figure(figsize=(12,12))
 plot_step = 0.25
 plot_range = (min(min(train_scores), min(test_scores), max(max(train_scores), max(test_scores))))
 #show the performance plot
-plt.subplot(2,2,1)
-plt.plot(parameters, train_scores, label='Train')
-plt.plot(parameters, test_scores, label='Test')
+#plt.subplot(2,2,1)
+plt.plot(parameters, train_scores, label='trainings data set')
+plt.plot(parameters, test_scores, label='testing data set')
 plt.vlines(para_optim, plt.ylim()[0], np.max(test_scores), color='k',
-           linewidth=3, label='Optimum on test')
-plt.legend(loc='lower left')
+           linewidth=3, label='optimal amount of learners')
+plt.legend(loc='lower right')
 plt.ylim(plot_range)
-plt.xlabel('Regularization parameter')
-plt.ylabel('Performance')
+plt.xlabel('Amount of subsequent learners')
+plt.ylabel('Score')
 
 #Plot the decision diagram
 plt.subplot(2,2,2)
@@ -265,14 +270,14 @@ else:
     cs = plt.contourf(xx, yy, Z, cmap=plt.cm.coolwarm) #plt.contour(.., linewidth=0.
 plt.axis("tight")
 
-##Plot the training points
-#for i, n, c in zip(range(2), class_names[:2], plot_colors[:2]):
-#    idx = np.where(y_test == i) #to filter weights: np.intersect1d(np.where(y == i), 
-#    plt.scatter(X_test[idx, 0], X_test[idx, 1],
-#                c=c, cmap=plt.cm.coolwarm,
-#                s=20, edgecolor='k',
-#                label="Class %s" % n,
-#                marker=".")
+#Plot the training points
+for i, n, c in zip(range(2), class_names[:2], plot_colors[:2]):
+    idx = np.where(y_test == i) #to filter weights: np.intersect1d(np.where(y == i), 
+    plt.scatter(X_test[idx, 0], X_test[idx, 1],
+                c=c, cmap=plt.cm.coolwarm,
+                s=20, edgecolor='k',
+                label="Class %s" % n,
+                marker=".")
 plt.xlim(x_min, x_max)
 plt.ylim(y_min, y_max)
 plt.legend(loc='upper right')
@@ -307,14 +312,14 @@ else:
     cs = plt.contourf(xx, yy, Z, cmap=plt.cm.coolwarm) #plt.contour(.., linewidth=0.
 plt.axis("tight")
 
-##Plot the training points
-#for i, n, c in zip(range(2), class_names[:2], plot_colors[:2]):
-#    idx = np.where(y_train == i) #to filter weights: np.intersect1d(np.where(y == i), 
-#    plt.scatter(X_train[idx, 0], X_train[idx, 1],
-#                c=c, cmap=plt.cm.coolwarm,
-#                s=20, edgecolor='k',
-#                label="Class %s" % n,
-#                marker=".")
+#Plot the training points
+for i, n, c in zip(range(2), class_names[:2], plot_colors[:2]):
+    idx = np.where(y_train == i) #to filter weights: np.intersect1d(np.where(y == i), 
+    plt.scatter(X_train[idx, 0], X_train[idx, 1],
+                c=c, cmap=plt.cm.coolwarm,
+                s=20, edgecolor='k',
+                label="Class %s" % n,
+                marker=".")
 plt.xlim(x_min, x_max)
 plt.ylim(y_min, y_max)
 plt.legend(loc='upper right')
@@ -330,7 +335,7 @@ plt.title('Decision Boundary')
 #save the matlib plot
 plt.savefig(os.path.join( output_directory, 'perf-desc-boundary' + version + '.png'))
 
-#setup the historgramms
+##setup the historgramms
 h_dis_train_SM = ROOT.TH1D("dis_train_sm", "Discriminator", 12, -1, 1)
 h_dis_train_BSM = ROOT.TH1D("dis_train_bsm", "Discriminator", 12, -1, 1)
 h_dis_test_SM = ROOT.TH1D("dis_test_sm", "Discriminator", 12, -1, 1)
@@ -428,7 +433,7 @@ kule_train, error_train = kl.kule_div(h_dis_train_SM, h_dis_train_BSM)
 logger.info('Kullback-Leibler Divergenz:\nTraining: %f and error: %f \nTesting: %f and error: %f',kule_train,error_train, kule_test, error_test)
 
 #Plot the diagramms
-c = ROOT.TCanvas("Discriminator", "", 2880, 1620)
+c = ROOT.TCanvas("Discriminator for n=" +str(para_optim), "", 2880, 1620)
 h_dis_train_SM.Draw("h e")
 h_dis_train_BSM.Draw("h same e")
 h_dis_test_SM.Draw("h same e")
@@ -437,8 +442,16 @@ h_dis_test_BSM.Draw("h same e")
 #get the maximum value
 max_value_hist = max(h_dis_train_SM.GetMaximum(), h_dis_train_BSM.GetMaximum(), h_dis_test_SM.GetMaximum(), h_dis_test_BSM.GetMaximum())
 max_value_margin = max_value_hist / 10.0
-#scale the plots
-h_dis_train_SM.SetMaximum(max_value_hist + max_value_margin)
+##scale the plots
+#h_dis_train_SM.SetMaximum(max_value_hist + max_value_margin)
+
+#fix the axis
+h_dis_train_SM.SetAxisRange(0.,0.45,"Y")
+h_dis_train_BSM.SetAxisRange(0.,0.45,"Y")
+h_dis_test_SM.SetAxisRange(0.,0.45,"Y")
+h_dis_test_BSM.SetAxisRange(0.,0.45,"Y")
+
+#redraw
 h_dis_train_SM.Draw("h e")
 h_dis_train_BSM.Draw("h same e")
 h_dis_test_SM.Draw("h same e")
@@ -447,17 +460,17 @@ h_dis_test_BSM.Draw("h same e")
 
 #add a legend
 leg = ROOT.TLegend(0.65, 0.9, 0.9, 0.65)
-leg.AddEntry(h_dis_train_SM,"SM Training")
-leg.AddEntry(h_dis_train_BSM,"BSM Training")
-leg.AddEntry(h_dis_test_SM,"SM Testing")
-leg.AddEntry(h_dis_test_BSM,"BSM Testing")
-leg.AddEntry(0, "Kul.div. test: " + str(kule_test) + " train: " + str(kule_train), "")
-leg.AddEntry(0, "Kul.div. error  test: " + str(error_test) + " train: " + str(error_train), "")
+leg.AddEntry(h_dis_train_SM,"SM training")
+leg.AddEntry(h_dis_train_BSM,"BSM training")
+leg.AddEntry(h_dis_test_SM,"SM testing")
+leg.AddEntry(h_dis_test_BSM,"BSM testing")
+#leg.AddEntry(0, "Kul.div. test: " + str(kule_test) + " train: " + str(kule_train), "")
+#leg.AddEntry(0, "Kul.div. error  test: " + str(error_test) + " train: " + str(error_train), "")
 
 leg.Draw()
 
 #label the axes
-h_dis_train_SM.GetXaxis().SetTitle("Discriminator")
+h_dis_train_SM.GetXaxis().SetTitle("Discriminator for n=" +str(para_optim))
 h_dis_train_SM.GetYaxis().SetTitle("Normalized number of events")
 
 #Save to file

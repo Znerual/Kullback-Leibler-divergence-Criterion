@@ -14,9 +14,6 @@ from sklearn.datasets import make_gaussian_quantiles, make_classification, make_
 from gen_datasets import *
 #from ttz_dataset import ttz_dataset
 
-# TTXPheno
-from TTXPheno.Tools.user import plot_directory 
-
 #generate the dataset
 X,y,w, w_min = gauss_easy(n_samples_bsm=4000, n_samples_sm= 4000)
 
@@ -93,4 +90,4 @@ plt.tight_layout()
 plt.subplots_adjust(wspace=0.35)
 
 #save the plot
-plt.savefig(os.path.join( plot_directory, 'Kullback-Leibler-Plots','gauss-comparison-sym-gini.png'))
+plt.savefig('test.png')

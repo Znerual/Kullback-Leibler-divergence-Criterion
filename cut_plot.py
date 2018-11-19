@@ -199,7 +199,7 @@ g_h_dis_test_BSM.Scale(1/g_w_test_sum_bsm)
 class_names = ["Kule Training", "Gini Training"]
 plot_colors = ["#000cff","#ff0000"]
 plt.figure(figsize=(12,12))
-plt.title("Kullback-Leibler Divegence for left sided cut")
+plt.title("Kullback Leibler divergence for a left sided cut")
 
 #initialice the Entropy classes
 kl = KullbackLeibler(logger)
@@ -225,7 +225,7 @@ plt.legend(loc='upper right')
 plt.ylim(plot_range)
 plt.xlim((0,k_h_dis_train_SM.GetNbinsX() +1))
 plt.xlabel('Cut value')
-plt.ylabel('Kullback-Leibler Divergence')
+plt.ylabel('Kullback Leibler divergence')
 plt.axis("tight")
 
 #save the matlib plot

@@ -76,34 +76,22 @@ def tplot(epoch, data, data_error):
     ca = ROOT.TCanvas("c1", "Criterion Epoch Plot", 1920, 1080)
     ca.SetFillColor(0)
     ca.SetGrid()
-    class_names = ["Gini", "Kule" , "Entropy"]
-    plot_colors = [[ROOT.kRed,ROOT.kCyan], [ROOT.kGreen, ROOT.kMagenta], [ROOT.kBlue, ROOT.kYellow]]
+    class_names = ["Gini", "Kule"]
+    plot_colors = [[ROOT.kRed,ROOT.kCyan], [ROOT.kGreen, ROOT.kMagenta]]
     line_width = 2
     marker_style = 0
     limits = [100000,0]
     mg = ROOT.TMultiGraph()
     for n,c in zip(class_names, plot_colors):
         #seperate the data into the two criteiron lists for better readability, and prepare them as arrays
-        gini_data = np.array( [i[0] for i in data[n]], dtype = float )
-        kule_data = np.array( [i[1] for i in data[n]], dtype = float )
-        gini_error = np.array( [i[0] for i in data_error[n]], dtype = float )
-        kule_error = np.array( [i[1] for i in data_error[n]], dtype = float )
-        epoch = np.array( epoch, dtype=float)
-        zeros = np.zeros(len(epoch), dtype=float)        
+        kule_data = np.array(data)
+        kule_error = np.array( data_error)
+        epoch = np.array( epoch)
+        zeros = np.zeros(len(epoch))        
         #getting the min and max values for the plot axes
-        if min(gini_data.min(), kule_data.min()) < limits[0]: limits[0] = min(gini_data.min(), kule_data.min())
-        if max(gini_data.max(), kule_data.max()) > limits[1]: limits[1] = max(gini_data.max(), kule_data.max())
+        if  kule_data.min() < limits[0]: limits[0] =  kule_data.min()
+        if kule_data.max() > limits[1]: limits[1] = kule_data.max()
         
-        #setup the gini error graph
-        grg = ROOT.TGraphErrors(len(epoch), epoch, gini_data, zeros, gini_error)
-        grg.SetName(n + "gini")
-        grg.SetLineColor(c[0])
-        grg.SetLineWidth(line_width)
-        grg.SetMarkerColor(c[0]+5)
-        grg.SetMarkerStyle(marker_style)
-        grg.SetTitle('Criterion: ' + n + ', Gini imp.')
-        mg.Add(grg, 'lp')
-
         #setup the kule error graph
         grk = ROOT.TGraphErrors(len(epoch), epoch, kule_data, zeros, kule_error)
         grk.SetName(n + "kule")
@@ -158,10 +146,10 @@ def plot(epoch, data):
 def get_histograms(X_test, X_train, y_test, y_train, w_test, w_train, test_decision_function, train_decision_function):
     
     #setup the historgramms
-    h_dis_train_SM = ROOT.TH1D("dis_train_sm", "Discriminator", 12, -1, 1)
-    h_dis_train_BSM = ROOT.TH1D("dis_train_bsm", "Discriminator", 12, -1, 1)
-    h_dis_test_SM = ROOT.TH1D("dis_test_sm", "Discriminator", 12, -1, 1)
-    h_dis_test_BSM = ROOT.TH1D("dis_test_bsm", "Discriminator", 12, -1, 1)
+    h_dis_train_SM = ROOT.TH1D("dis_train_sm", "Discriminator", 24, -1, 1)
+    h_dis_train_BSM = ROOT.TH1D("dis_train_bsm", "Discriminator", 24, -1, 1)
+    h_dis_test_SM = ROOT.TH1D("dis_test_sm", "Discriminator", 24, -1, 1)
+    h_dis_test_BSM = ROOT.TH1D("dis_test_bsm", "Discriminator", 24, -1, 1)
 
     #set the error calculationsmethod
     ROOT.TH1.SetDefaultSumw2()
@@ -275,8 +263,8 @@ if args.ptz_only:
     X_test = np.reshape(X_test, (-1,1))
 
 #setting up the lists for iterationg through the different criterions
-criterion_list = ['gini', 'entropy', kldc]
-name_list = ['Gini' , 'Entropy' , 'Kule']
+criterion_list = ['gini', kldc]
+name_list = ['Gini' , 'Kule']
 
 #setting up the result dictionarys
 test = {}
@@ -286,7 +274,6 @@ error_train = {}
 
 #initialising the criterions
 kl = KullbackLeibler(logger)
-gi = Gini(logger)
 
 for crit, name in zip(criterion_list, name_list):
     #Create the tree
@@ -310,8 +297,6 @@ for crit, name in zip(criterion_list, name_list):
         #Berechne die Kule Div und den Gini
         kule_test, k_error_test = kl.kule_div(h_dis_test_SM, h_dis_test_BSM)
         kule_train, k_error_train = kl.kule_div(h_dis_train_SM, h_dis_train_BSM)
-        gini_test, g_error_test = gi.gini(h_dis_test_SM, h_dis_test_BSM)
-        gini_train, g_error_train = gi.gini(h_dis_train_SM, h_dis_train_BSM)
         
         #reset the histogramms to fill them again next iteration
         h_dis_train_SM.Delete()
@@ -321,16 +306,16 @@ for crit, name in zip(criterion_list, name_list):
         
         #fill the result dictionarys       
         if name in test:
-            test[name].append((gini_test, kule_test))
-            train[name].append((gini_train, kule_train))
-            error_test[name].append((g_error_test, k_error_test))
-            error_train[name].append((k_error_train, k_error_train))
+            test[name].append(( kule_test))
+            train[name].append((kule_train))
+            error_test[name].append((k_error_test))
+            error_train[name].append(( k_error_train))
         else:
-            test[name] = [(gini_test, kule_test)]
-            train[name] = [(gini_train, kule_train)]
-            error_test[name] = [(g_error_test, k_error_test)]
-            error_train[name] = [(g_error_train, k_error_train)]
-        logger.info("Training %s with parameter %i, gettting a kule of (test:%f|train:%f and a gini of (test:%f|train:%f) with a error of kule test: %f, kule train: %f, gini test: %f, gini train: %f", name, para, kule_test, kule_train, gini_test, gini_train,k_error_test, k_error_train, g_error_test, g_error_train)
+            test[name] = [ (kule_test)]
+            train[name] = [(kule_train)]
+            error_test[name] = [(k_error_test)]
+            error_train[name] = [(k_error_train)]
+        logger.info("Training %s with parameter %i, gettting a kule of (test:%f|train:%f with a error of kule test: %f, kule train: %f", name, para, kule_test, kule_train,k_error_test, k_error_train)
     
 #stop the time to train the tree
 ende_training = time.time()
@@ -345,16 +330,12 @@ logger.info('Save to %s directory', output_directory)
 #end if no_plot argument was choosen, else plot the choosen result dictionary
 if not args.no_plot:
     if args.choice == 'test':
-        plot(parameters, test)
         tplot(parameters, test, error_test)
     elif args.choice == 'train':
-        plot(parameters, train)
         tplot(parameters, train, error_train)   
     elif args.choice == 'error_train':
-        plot(parameters, error_train)
         tplot(parameters, train, error_train)   
     elif args.choice == 'error_test':
-        plot(parameters, error_test)
         tplot(parameters, test, error_test)
     else:
         logger.error("Wrong type of data for plotting was choosen %s", args.choice)
