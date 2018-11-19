@@ -1,0 +1,9 @@
+numpy >= 1.8.2
+scipy >= 0.13.3
+cython >= 0.23
+matplotlib
+ipython
+jupyter
+pandas
+sympy
+nose
