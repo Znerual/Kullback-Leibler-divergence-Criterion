@@ -1,3 +1,9 @@
+######### This script is used by the gif-helper script, to generate a series
+######### of single image plots, which can be assembles to a gif, showing the 
+######### trainings evolution of our BDT
+
+
+
 # Standard imports 
 import numpy as np
 import os
