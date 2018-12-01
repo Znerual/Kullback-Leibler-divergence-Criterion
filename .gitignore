@@ -1,3 +1,4 @@
+debug*
 *.c
 *.so
 *.pyc

@@ -6,78 +6,24 @@
 #sklearn imports
 from sklearn.tree._criterion cimport ClassificationCriterion
 from sklearn.tree._criterion cimport SIZE_t
-from sklearn.tree._utils cimport log
+#from sklearn.tree._utils cimport log
 
 #default imports
 import numpy as np
 cdef double INFINITY = np.inf
 
 #math imports
-from libc.math cimport sqrt, pow
+from libc.math cimport sqrt, pow, log
 from libc.math cimport abs
 
 cdef bint DEBUG = False
 cdef bint DEBUG_proxy = False
+cdef bint DEBUG_rho = False
+cdef bint DEBUG_plot = False
+cdef bint DEBUG_kule = False
 choice = 'kule'
 
-cdef class KullbackLeibnerCriterion(ClassificationCriterion):
-    cdef double proxy_impurity_improvement(self) nogil:
-        '''Compute a proxy of the impurity reduction
-        This method is used to speed up the search for the best split.
-        It is a proxy quantity such that the split that maximizes this value
-        also maximizes the impurity improvement. It neglects all constant terms
-        of the impurity decrease for a given split.
-        The absolute impurity improvement is only computed by the
-        impurity_improvement method once the best split has been found.'''
-        
-        cdef double impurity_left
-        cdef double impurity_right
-        self.children_impurity(&impurity_left, &impurity_right)
-        if DEBUG_proxy: 
-            with gil:
-                print "proxy_impurity_improvement " + str((- self.weighted_n_right * impurity_right
-                - self.weighted_n_left * impurity_left))
- 
-        return (- self.weighted_n_right * impurity_right
-                - self.weighted_n_left * impurity_left)
-
-    cdef double impurity_improvement(self, double impurity) nogil:
-        '''Compute the improvement in impurity
-        This method computes the improvement in impurity when a split occurs.
-        The weighted impurity improvement equation is the following:
-            N_t / N * (impurity - N_t_R / N_t * right_impurity
-                                - N_t_L / N_t * left_impurity)
-        where N is the total number of samples, N_t is the number of samples
-        at the current node, N_t_L is the number of samples in the left child,
-        and N_t_R is the number of samples in the right child,
-        Parameters
-        ----------
-        impurity : double
-            The initial impurity of the node before the split
-        Return
-        ------
-        double : improvement in impurity after the split occurs'''
-        
-
-        cdef double impurity_left
-        cdef double impurity_right
-
-        self.children_impurity(&impurity_left, &impurity_right)
-        if DEBUG:
-            with gil:
-                print "Impurity Improvement " + str(((self.weighted_n_node_samples / self.weighted_n_samples) *
-                (impurity - (self.weighted_n_right /
-                             self.weighted_n_node_samples * impurity_right)
-                          - (self.weighted_n_left /
-                             self.weighted_n_node_samples * impurity_left))))
-
-        return ((self.weighted_n_node_samples / self.weighted_n_samples) *
-                (impurity - (self.weighted_n_right / 
-                             self.weighted_n_node_samples * impurity_right)
-                          - (self.weighted_n_left / 
-                             self.weighted_n_node_samples * impurity_left)))
-
-
+cdef class KullbackLeiblerCriterion(ClassificationCriterion):
     cdef double node_impurity(self) nogil:
         
         cdef SIZE_t* n_classes = self.n_classes
@@ -94,9 +40,9 @@ cdef class KullbackLeibnerCriterion(ClassificationCriterion):
         cdef SIZE_t c
 
         with gil:
-          assert self.n_outputs == 1,    "Only one output with Kullback-Leibner Criterion"
-          assert self.n_classes[0] == 2, "Only two classes with Kullback-Leibner Criterion"
-        
+            assert self.n_outputs == 1,    "Only one output with Kullback-Leibler Criterion"
+            assert self.n_classes[0] == 2, "Only two classes with Kullback-Leibler Criterion"
+            if DEBUG_rho: print "Rho: %f" %(sum_total[1]/self.weighted_n_node_samples)
         for k in range(self.n_outputs):
             # Gini
             if DEBUG:
@@ -127,7 +73,7 @@ cdef class KullbackLeibnerCriterion(ClassificationCriterion):
             #    kule = 0
             elif rho>0:
                 #kule  = -rho*log(rho/(1-rho))
-                kule  = 0.5*rho - 0.25*rho*log(rho/(1-rho))
+                kule  = 2.0*rho - rho*log(rho/(1-rho))
                 #kule = 1.0 - (rho_0**2 + rho**2)
             else:
                 kule = 0
@@ -183,8 +129,10 @@ cdef class KullbackLeibnerCriterion(ClassificationCriterion):
         cdef SIZE_t c
 
         with gil:
-          assert self.n_outputs == 1,    "Only one output with Kullback-Leibner Criterion"
-          assert self.n_classes[0] == 2, "Only two classes with Kullback-Leibner Criterion"
+          assert self.n_outputs == 1,    "Only one output with Kullback-Leibler Criterion"
+          assert self.n_classes[0] == 2, "Only two classes with Kullback-Leibler Criterion"
+          if DEBUG_rho: print "Rho_l: %f" %(sum_left[1]/self.weighted_n_left)
+          if DEBUG_rho: print "Rho_r: %f" %(sum_right[1]/self.weighted_n_right)
 
 
         for k in range(self.n_outputs):
@@ -220,6 +168,7 @@ cdef class KullbackLeibnerCriterion(ClassificationCriterion):
 
             # kule
             rho_left = sum_left[1]/self.weighted_n_left
+            
             if DEBUG: rho_0_left = sum_left[0]/self.weighted_n_left # for debugging
             if rho_left == 1:
                 kule_left = -INFINITY
@@ -228,7 +177,7 @@ cdef class KullbackLeibnerCriterion(ClassificationCriterion):
             #    kule_left = 0
             elif rho_left > 0:
                 #kule_left = -rho_left*log(rho_left/(1-rho_left))
-                kule_left = 0.5*rho_left - 0.25*rho_left*log(rho_left/(1-rho_left))
+                kule_left = 2.0*rho_left - rho_left*log(rho_left/(1-rho_left))
                 #kule_left = 1.0-(rho_0_left**2 + rho_left**2)
             else:
                 kule_left = 0.
@@ -242,18 +191,18 @@ cdef class KullbackLeibnerCriterion(ClassificationCriterion):
             #    kule_right = 0
             elif rho_right > 0:
                 #kule_right = -rho_right*log(rho_right/(1-rho_right))
-                kule_right = 0.5*rho_right - 0.25*rho_right*log(rho_right/(1-rho_right))
+                kule_right = 2.0*rho_right - rho_right*log(rho_right/(1-rho_right))
                 #kule_right = 1.0 - (rho_0_right**2 + rho_right**2) 
             else:
                 kule_right = 0.
-            
+            #stop splitting if too few samples left in node
             if DEBUG:
                 # for debugging: compute the mother impurity
                 rho  = (sum_left[1] + sum_right[1])/(self.weighted_n_left + self.weighted_n_right)
                 if rho == 1:
                     kule = - INFINITY
                 elif rho > 0:
-                    kule = 0.5*rho - 0.25*rho*log(rho/(1-rho))
+                    kule = 2.0*rho - rho*log(rho/(1-rho))
                 else:
                     kule = 0.
 
@@ -285,6 +234,9 @@ cdef class KullbackLeibnerCriterion(ClassificationCriterion):
         with gil:
             #DeltaKule =  - self.weighted_n_left*kule_left - self.weighted_n_right*kule_right + (self.weighted_n_left+self.weighted_n_right)*kule
             #print "children_impurity: kule_left %6.4f kule_right %6.4f kule_tot %6.4f DeltaKule %6.4f"%( kule_left, kule_right, kule, DeltaKule)
+            if DEBUG_rho: print "kule_left %f, kule_right %f, kule total %f" %(kule_left / self.n_outputs, kule_right / self.n_outputs, (kule_left + kule_right) /self.n_outputs ) 
+            if DEBUG_plot: print "%f %f %f" %(kule_left / self.n_outputs, kule_right / self.n_outputs, (kule_left + kule_right) /self.n_outputs ) 
+            if DEBUG_kule: print "%f %f %f %f" %(rho_left, rho_right, kule_left / self.n_outputs, kule_right / self.n_outputs) 
             if choice == 'gini':
                 impurity_left[0] = gini_left / self.n_outputs
                 impurity_right[0] = gini_right / self.n_outputs

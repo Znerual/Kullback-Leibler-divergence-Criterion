@@ -49,7 +49,7 @@ argParser.add_argument('--ptz_only', action='store_true', help='Only use the pTZ
 args = argParser.parse_args()
 
 #Set the version of the script
-vversion = 'v14'
+vversion = 'v15'
 
 #set criterion, you can choose from (gini, kule, entropy, hellinger)
 
@@ -207,7 +207,7 @@ plt.figure(figsize=(12,12))
 plot_step = 0.25
 plot_range = (min(min(train_scores), min(test_scores), max(max(train_scores), max(test_scores))))
 #show the performance plot
-#plt.subplot(2,2,1)
+plt.subplot(2,2,1)
 plt.plot(parameters, train_scores, label='trainings data set')
 plt.plot(parameters, test_scores, label='testing data set')
 plt.vlines(para_optim, plt.ylim()[0], np.max(test_scores), color='k',

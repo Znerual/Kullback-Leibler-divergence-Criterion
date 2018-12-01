@@ -40,7 +40,7 @@ argParser.add_argument('--random_state', action='store', default=0, type=int,nar
 args = argParser.parse_args()
 
 #Set the version of the script
-vversion = 'v2'
+vversion = 'v3'
 
 #Logger
 import RootTools.core.logger as Logger

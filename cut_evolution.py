@@ -407,3 +407,9 @@ c.Print(os.path.join( output_directory, 'ttz-kule' + version + '.png'))
 #stop the timer
 ende = time.time()
 logger.info('Ende des Runs, Laufzeit: ' + '{:5.3f}s'.format(ende-start))
+
+#berechne die KULE
+
+kule = KullbackLeibler(logger)
+kd = kule.kule_div(h_dis_train_SM, h_dis_train_BSM)
+print "Kule %f, deviation %f" %(kd[0], kd[1])
