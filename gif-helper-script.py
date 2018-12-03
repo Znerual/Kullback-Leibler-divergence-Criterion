@@ -4,6 +4,6 @@
 import os
 for i in range(1,50):
     os.system("python cut_evolution.py --n_est " + str(i)) 
-    os.system("python cut_evolution.py --criterion gini --n_est " + str(i)) 
-    os.system("python cut_evolution.py --criterion entropy --n_est " + str(i)) 
+   # os.system("python cut_evolution.py --criterion gini --n_est " + str(i)) 
+   # os.system("python cut_evolution.py --criterion entropy --n_est " + str(i)) 
   

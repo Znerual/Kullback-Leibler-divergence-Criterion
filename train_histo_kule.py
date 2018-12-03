@@ -45,6 +45,7 @@ argParser.add_argument('--boost_algorithm', action='store', default='SAMME', nar
 argParser.add_argument('--swap_hypothesis', action='store_true', help="Chance the Target Labels of SM and BSM Hypothesis")
 argParser.add_argument('--random_state', action='store', default=0, type=int,nargs='?',  help="The random state, which is given to the train_test_split method")
 argParser.add_argument('--ptz_only', action='store_true', help='Only use the pTZ feature for training')
+argParser.add_argument('--score_only', action='store_true',help='Only plot the score over the  amount of weak leaners')
 
 args = argParser.parse_args()
 
@@ -207,6 +208,18 @@ plt.figure(figsize=(12,12))
 plot_step = 0.25
 plot_range = (min(min(train_scores), min(test_scores), max(max(train_scores), max(test_scores))))
 #show the performance plot
+if args.score_only:
+    plt.plot(parameters, train_scores, label='trainings data set')
+    plt.plot(parameters, test_scores, label='testing data set')
+    plt.vlines(para_optim, plt.ylim()[0], np.max(test_scores), color='k',
+               linewidth=3, label='optimal amount of learners')
+    plt.legend(loc='lower right')
+    plt.ylim(plot_range)
+    plt.xlabel('Amount of subsequent learners')
+    plt.ylabel('Score')
+    #save the matlib plot
+    plt.savefig(os.path.join( output_directory, 'perf-desc-boundary' + version + '.png'))
+    quit()
 plt.subplot(2,2,1)
 plt.plot(parameters, train_scores, label='trainings data set')
 plt.plot(parameters, test_scores, label='testing data set')
